@@ -1,0 +1,6 @@
+#ifndef TDEFLATPAK_CONFIG_H
+#define TDEFLATPAK_CONFIG_H
+
+#define TDEFLATPAK_VERSION "@VERSION@"
+
+#endif

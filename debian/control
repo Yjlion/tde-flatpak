@@ -1,0 +1,39 @@
+Source: tdeflatpak
+Section: admin
+Priority: optional
+Maintainer: Yjlion <32956705+Yjlion@users.noreply.github.com>
+Build-Depends: debhelper-compat (= 13),
+               cmake,
+               pkg-config,
+               tde-cmake,
+               tdelibs14-trinity-dev,
+               libtqt3-mt-dev,
+               tqt3-dev-tools,
+               libtqtinterface-dev,
+               libflatpak-dev (>= 1.6),
+               libglib2.0-dev,
+               zlib1g-dev
+Standards-Version: 4.7.0
+Homepage: https://github.com/Yjlion/tde-flatpak
+Vcs-Browser: https://github.com/Yjlion/tde-flatpak
+Vcs-Git: https://github.com/Yjlion/tde-flatpak.git
+Rules-Requires-Root: no
+
+Package: tdeflatpak
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, flatpak
+Recommends: xdg-desktop-portal-trinity, polkit-agent-tde
+Description: Flatpak manager for the Trinity Desktop Environment
+ tdeflatpak is a graphical application for managing Flatpak on the
+ Trinity Desktop Environment (TDE). It uses libflatpak directly and can:
+  * list and uninstall installed applications and runtimes
+  * search the AppStream catalogs of configured remotes and install apps
+  * check for and install updates
+  * add (including Flathub), enable/disable and remove remotes
+  * remove unused runtimes
+  * install .flatpakref files and add .flatpakrepo remotes
+ .
+ DISCLAIMER: this application was largely "vibe coded" with the help of an
+ AI coding assistant. It has not been thoroughly reviewed or tested, may
+ contain bugs and can modify the Flatpak installations on your system. It is
+ provided as-is, without any warranty. Use it at your own risk.
