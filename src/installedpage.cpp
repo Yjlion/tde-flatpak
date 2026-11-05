@@ -129,7 +129,9 @@ void InstalledPage::populate()
         m_itemIndex[item] = idx;
     }
 
-    m_summary->setText(i18n("%1 applications, %2 runtimes installed").arg(apps).arg(runtimes));
+    m_summary->setText(i18n("installed apps, installed runtimes", "%1, %2 installed")
+                           .arg(i18n("%n application", "%n applications", apps))
+                           .arg(i18n("%n runtime", "%n runtimes", runtimes)));
     m_search->updateSearch();
     slotSelectionChanged();
 }

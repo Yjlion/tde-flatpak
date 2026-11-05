@@ -27,6 +27,7 @@ static TDECmdLineOptions options[] =
     { "+[file]", I18N_NOOP(".flatpakref or .flatpakrepo file to open"), 0 },
     { "updates", I18N_NOOP("Show the updates page"), 0 },
     { "search", I18N_NOOP("Show the search page"), 0 },
+    { "remotes", I18N_NOOP("Show the remotes page"), 0 },
     TDECmdLineLastOption
 };
 
@@ -52,6 +53,8 @@ int main(int argc, char **argv)
         win->showUpdates();
     } else if (args->isSet("search")) {
         win->showSearch();
+    } else if (args->isSet("remotes")) {
+        win->showRemotes();
     }
     if (args->count() > 0) {
         win->openFile(args->url(0));

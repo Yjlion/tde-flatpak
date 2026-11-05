@@ -9,3 +9,4 @@ Terminal=false
 Categories=Qt;TDE;System;PackageManager;
 MimeType=application/vnd.flatpak.ref;application/vnd.flatpak.repo;
 Keywords=flatpak;flathub;software;install;update;package;
+X-DocPath=tdeflatpak/index.html

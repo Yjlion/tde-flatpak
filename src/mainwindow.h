@@ -30,6 +30,7 @@ public slots:
     void refreshAll();
     void showSearch();
     void showUpdates();
+    void showRemotes();
 
 private slots:
     void slotCurrentChanged(TQWidget *page);

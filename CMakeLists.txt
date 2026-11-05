@@ -67,3 +67,4 @@ configure_file( config.h.cmake config.h @ONLY )
 
 add_subdirectory( src )
 add_subdirectory( icons )
+add_subdirectory( doc )

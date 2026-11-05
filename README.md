@@ -28,6 +28,27 @@ Software's flatpak plugin and Plasma Discover's Flatpak backend.
   remote) from the file manager or the command line.
 - Shows live progress and a detailed log for each operation, with Cancel support.
 
+## Screenshots
+
+| Installed | Search & Install |
+| --- | --- |
+| ![Installed applications](screenshots/installed.png) | ![Searching Flathub](screenshots/search.png) |
+| **Updates** | **Remotes** |
+| ![Available updates](screenshots/updates.png) | ![Configured remotes](screenshots/remotes.png) |
+| **Progress dialog** | **Add Remote dialog** |
+| ![Operation progress](screenshots/operation.png) | ![Add Remote dialog](screenshots/add-remote.png) |
+
+The screenshots come from `scripts/take-screenshots.sh`, which runs the app
+under Xvfb with a demo repository and the real Flathub catalog. The same
+images are used in the handbook.
+
+## Documentation
+
+- **Handbook**: open it with *Help → Flatpak Manager Handbook*, or in
+  KHelpCenter at `help:/tdeflatpak`. The source is `doc/en/index.docbook`.
+- **Man page**: run `man tdeflatpak`; it is installed to
+  `/opt/trinity/share/man/man1`. The source is `doc/man/tdeflatpak.1`.
+
 ## Installing
 
 Download the `.deb` from the
@@ -47,7 +68,7 @@ The package depends on `flatpak` and recommends:
   which Flatpak applications use for file dialogs, opening URLs and similar.
 
 Start it from the TDE menu (*System → Flatpak Manager*) or run
-`tdeflatpak [file.flatpakref|file.flatpakrepo] [--updates|--search]`.
+`tdeflatpak [file.flatpakref|file.flatpakrepo] [--updates|--search|--remotes]`.
 
 ## Building
 
@@ -57,6 +78,7 @@ the official Trinity repository:
 ```sh
 scripts/build-deb.sh          # writes dist/tdeflatpak_*.deb (runs lintian)
 scripts/compile-check.sh      # quick compile-only check
+scripts/take-screenshots.sh   # regenerate screenshots/ (needs the built .deb)
 ```
 
 Building manually on a Debian/TDE system with the build dependencies from

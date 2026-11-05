@@ -137,6 +137,11 @@ void MainWindow::showUpdates()
     m_tabs->showPage(m_updates);
 }
 
+void MainWindow::showRemotes()
+{
+    m_tabs->showPage(m_remotes);
+}
+
 void MainWindow::slotReloadCatalog()
 {
     showSearch();
