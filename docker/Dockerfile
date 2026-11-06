@@ -16,7 +16,7 @@ RUN apt-get update \
       build-essential devscripts debhelper fakeroot lintian \
       cmake pkg-config file \
       tde-cmake tdelibs14-trinity-dev libtqt3-mt-dev tqt3-dev-tools libtqtinterface-dev \
-      libflatpak-dev libglib2.0-dev zlib1g-dev \
+      libflatpak-dev libglib2.0-dev libjson-glib-dev zlib1g-dev \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /src

@@ -1,0 +1,17 @@
+[Desktop Entry]
+Type=Application
+Exec=tdecmshell tdeflatpak-settings
+Icon=tdeflatpak
+Terminal=false
+X-DocPath=tdeflatpak/index.html#kcontrol
+X-TDE-ModuleType=Library
+X-TDE-Library=tdeflatpak
+X-TDE-FactoryName=tdeflatpak
+X-TDE-HasReadOnlyMode=false
+X-TDE-ParentApp=kcontrol
+Categories=Qt;TDE;X-TDE-settings-system;
+OnlyShowIn=TDE;
+
+Name=Flatpak Applications
+Comment=Settings and permissions of Flatpak applications
+Keywords=flatpak;flathub;permissions;sandbox;override;portal;applications;software;

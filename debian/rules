@@ -9,6 +9,7 @@ export DEB_CXXFLAGS_MAINT_APPEND = -Wall
 override_dh_auto_configure:
 	dh_auto_configure -- \
 		-DCMAKE_INSTALL_PREFIX=/opt/trinity \
+		-DLIB_INSTALL_DIR=/opt/trinity/lib \
 		-DCMAKE_BUILD_TYPE=RelWithDebInfo
 
 override_dh_shlibdeps:

@@ -5,10 +5,11 @@
  */
 
 #include "installedpage.h"
+#include "appactions.h"
+#include "appdetailsdialog.h"
 #include "flatpakbackend.h"
-#include "flatpakjob.h"
-#include "operationdialog.h"
 #include "iconcache.h"
+#include "permissionswidget.h"
 
 #include <tqcheckbox.h>
 #include <tqlabel.h>
@@ -24,9 +25,10 @@
 #include <tdelistviewsearchline.h>
 #include <tdelocale.h>
 #include <tdemessagebox.h>
+#include <tdepopupmenu.h>
 #include <kpushbutton.h>
 
-enum { ColName = 0, ColId, ColVersion, ColBranch, ColOrigin, ColInstallation, ColSize };
+enum { ColName = 0, ColId, ColVersion, ColBranch, ColOrigin, ColInstallation, ColSize, ColNotes };
 
 InstalledPage::InstalledPage(TQWidget *parent, const char *name)
     : TQWidget(parent, name)
@@ -52,6 +54,7 @@ InstalledPage::InstalledPage(TQWidget *parent, const char *name)
     m_list->addColumn(i18n("Origin"));
     m_list->addColumn(i18n("Installation"));
     m_list->addColumn(i18n("Size"));
+    m_list->addColumn(i18n("Notes"));
     m_list->setColumnAlignment(ColSize, TQt::AlignRight);
     m_list->setSelectionMode(TQListView::Extended);
     m_list->setAllColumnsShowFocus(true);
@@ -65,14 +68,22 @@ InstalledPage::InstalledPage(TQWidget *parent, const char *name)
 
     m_refreshButton = new KPushButton(SmallIconSet("view-refresh"), i18n("Re&fresh"), this);
     m_runButton = new KPushButton(SmallIconSet("system-run"), i18n("&Run"), this);
+    m_detailsButton = new KPushButton(SmallIconSet("help-about"), i18n("&Details..."), this);
+    m_permButton = new KPushButton(SmallIconSet("configure"), i18n("&Permissions..."), this);
     m_uninstallButton = new KPushButton(SmallIconSet("edit-delete"), i18n("&Uninstall"), this);
     bottom->addWidget(m_refreshButton);
     bottom->addWidget(m_runButton);
+    bottom->addWidget(m_detailsButton);
+    bottom->addWidget(m_permButton);
     bottom->addWidget(m_uninstallButton);
 
     connect(m_refreshButton, TQ_SIGNAL(clicked()), this, TQ_SLOT(refresh()));
     connect(m_runButton, TQ_SIGNAL(clicked()), this, TQ_SLOT(slotRun()));
     connect(m_uninstallButton, TQ_SIGNAL(clicked()), this, TQ_SLOT(slotUninstall()));
+    connect(m_detailsButton, TQ_SIGNAL(clicked()), this, TQ_SLOT(slotDetails()));
+    connect(m_permButton, TQ_SIGNAL(clicked()), this, TQ_SLOT(slotPermissions()));
+    connect(m_list, TQ_SIGNAL(contextMenu(TDEListView *, TQListViewItem *, const TQPoint &)),
+            this, TQ_SLOT(slotContextMenu(TDEListView *, TQListViewItem *, const TQPoint &)));
     connect(m_list, TQ_SIGNAL(selectionChanged()), this, TQ_SLOT(slotSelectionChanged()));
     connect(m_list, TQ_SIGNAL(doubleClicked(TQListViewItem *)), this, TQ_SLOT(slotDoubleClicked(TQListViewItem *)));
     connect(m_showRuntimes, TQ_SIGNAL(toggled(bool)), this, TQ_SLOT(slotShowRuntimesToggled(bool)));
@@ -88,6 +99,25 @@ void InstalledPage::refresh()
         KMessageBox::error(this, i18n("Could not list installed Flatpaks:\n%1").arg(error));
     }
     m_refs = refs;
+
+    // update masks and pins, as shown in the Notes column
+    m_masked.clear();
+    m_pinned.clear();
+    for (int scope = 0; scope < 2; ++scope) {
+        const TQStringList masked = FlatpakBackend::configPatterns(scope, "masked");
+        const TQStringList pinned = FlatpakBackend::configPatterns(scope, "pinned");
+        for (FpInstalledRefList::ConstIterator it = m_refs.begin(); it != m_refs.end(); ++it) {
+            if ((*it).scope != scope) {
+                continue;
+            }
+            if (!masked.isEmpty() && FlatpakBackend::patternsMatch(masked, (*it).ref)) {
+                m_masked[fpRefKey(scope, (*it).ref)] = true;
+            }
+            if (!pinned.isEmpty() && FlatpakBackend::patternsMatch(pinned, (*it).ref)) {
+                m_pinned[fpRefKey(scope, (*it).ref)] = true;
+            }
+        }
+    }
     populate();
     emit installedChanged();
 }
@@ -126,6 +156,14 @@ void InstalledPage::populate()
             }
         }
         item->setPixmap(ColName, pix);
+        TQStringList notes;
+        if (m_masked.contains(fpRefKey(r.scope, r.ref))) {
+            notes.append(i18n("Updates blocked"));
+        }
+        if (m_pinned.contains(fpRefKey(r.scope, r.ref))) {
+            notes.append(i18n("Pinned"));
+        }
+        item->setText(ColNotes, notes.join(", "));
         m_itemIndex[item] = idx;
     }
 
@@ -153,7 +191,84 @@ void InstalledPage::slotSelectionChanged()
         }
     }
     m_runButton->setEnabled(selected == 1 && singleApp);
+    m_detailsButton->setEnabled(selected == 1 && singleApp);
+    m_permButton->setEnabled(selected == 1 && singleApp);
     m_uninstallButton->setEnabled(selected > 0);
+}
+
+const FpInstalledRef *InstalledPage::currentRef() const
+{
+    TQListViewItemIterator it(m_list, TQListViewItemIterator::Selected | TQListViewItemIterator::Visible);
+    if (!it.current() || !m_itemIndex.contains(it.current())) {
+        return 0;
+    }
+    return &m_refs[m_itemIndex[it.current()]];
+}
+
+void InstalledPage::slotDetails()
+{
+    const FpInstalledRef *r = currentRef();
+    if (r && r->isApp) {
+        const FpInstalledRef copy = *r;
+        if (AppDetailsDialog::showDetails(this, 0, &copy)) {
+            emit modified();
+        }
+    }
+}
+
+void InstalledPage::slotPermissions()
+{
+    const FpInstalledRef *r = currentRef();
+    if (r && r->isApp && PermissionsDialog::edit(this, r->id)) {
+        emit modified();
+    }
+}
+
+void InstalledPage::slotToggleMask()
+{
+    const FpInstalledRef *r = currentRef();
+    if (!r || !r->isApp) {
+        return;
+    }
+    const FpInstalledRef copy = *r;
+    AppActions::setMasked(this, copy.scope, copy.ref, !m_masked.contains(fpRefKey(copy.scope, copy.ref)));
+    emit modified();
+}
+
+void InstalledPage::slotTogglePin()
+{
+    const FpInstalledRef *r = currentRef();
+    if (!r || r->isApp) {
+        return;
+    }
+    const FpInstalledRef copy = *r;
+    AppActions::setPinned(this, copy.scope, copy.ref, !m_pinned.contains(fpRefKey(copy.scope, copy.ref)));
+    emit modified();
+}
+
+void InstalledPage::slotContextMenu(TDEListView *, TQListViewItem *item, const TQPoint &pos)
+{
+    if (!item || !m_itemIndex.contains(item)) {
+        return;
+    }
+    const FpInstalledRefList &refs = m_refs;   // const access: no detach, stable addresses
+    const FpInstalledRef &r = refs[m_itemIndex[item]];
+    const bool single = currentRef() == &r;
+    TDEPopupMenu menu(this);
+    if (r.isApp && single) {
+        menu.insertItem(SmallIconSet("system-run"), i18n("&Run"), this, TQ_SLOT(slotRun()));
+        menu.insertItem(SmallIconSet("help-about"), i18n("&Details..."), this, TQ_SLOT(slotDetails()));
+        menu.insertItem(SmallIconSet("configure"), i18n("&Permissions..."), this, TQ_SLOT(slotPermissions()));
+        int id = menu.insertItem(i18n("&Block Updates"), this, TQ_SLOT(slotToggleMask()));
+        menu.setItemChecked(id, m_masked.contains(fpRefKey(r.scope, r.ref)));
+        menu.insertSeparator();
+    } else if (!r.isApp && single) {
+        int id = menu.insertItem(i18n("&Keep When Unused (Pin)"), this, TQ_SLOT(slotTogglePin()));
+        menu.setItemChecked(id, m_pinned.contains(fpRefKey(r.scope, r.ref)));
+        menu.insertSeparator();
+    }
+    menu.insertItem(SmallIconSet("edit-delete"), i18n("&Uninstall"), this, TQ_SLOT(slotUninstall()));
+    menu.exec(pos);
 }
 
 void InstalledPage::slotDoubleClicked(TQListViewItem *item)
@@ -165,49 +280,24 @@ void InstalledPage::slotDoubleClicked(TQListViewItem *item)
 
 void InstalledPage::slotRun()
 {
-    TQListViewItemIterator it(m_list, TQListViewItemIterator::Selected | TQListViewItemIterator::Visible);
-    if (!it.current() || !m_itemIndex.contains(it.current())) {
-        return;
-    }
-    const FpInstalledRef &r = m_refs[m_itemIndex[it.current()]];
-    TQString error;
-    if (!FlatpakBackend::launch(r.scope, r.ref, error)) {
-        KMessageBox::error(this, i18n("Could not start %1:\n%2").arg(r.name).arg(error));
+    const FpInstalledRef *r = currentRef();
+    if (r) {
+        AppActions::launch(this, *r);
     }
 }
 
 void InstalledPage::slotUninstall()
 {
-    TQStringList names;
-    FlatpakJob *job = new FlatpakJob(FlatpakJob::Transaction, 0);
-
+    FpInstalledRefList refs;
     TQListViewItemIterator it(m_list, TQListViewItemIterator::Selected | TQListViewItemIterator::Visible);
     for (; it.current(); ++it) {
-        if (!m_itemIndex.contains(it.current())) {
-            continue;
+        if (m_itemIndex.contains(it.current())) {
+            refs.append(m_refs[m_itemIndex[it.current()]]);
         }
-        const FpInstalledRef &r = m_refs[m_itemIndex[it.current()]];
-        names.append(TQString("%1 (%2, %3)").arg(r.name).arg(r.branch).arg(FlatpakBackend::scopeName(r.scope)));
-        job->addUninstall(r.scope, r.ref);
     }
-    if (names.isEmpty()) {
-        delete job;
-        return;
+    if (AppActions::uninstall(this, refs)) {
+        emit modified();
     }
-
-    int answer = KMessageBox::warningContinueCancelList(this,
-        i18n("Do you really want to uninstall the following item?",
-             "Do you really want to uninstall the following %n items?", names.count()),
-        names, i18n("Uninstall"),
-        KGuiItem(i18n("&Uninstall"), "edit-delete"));
-    if (answer != KMessageBox::Continue) {
-        delete job;
-        return;
-    }
-
-    OperationDialog::run(this, job, i18n("Uninstall"),
-                         i18n("<b>Uninstalling %n item</b>", "<b>Uninstalling %n items</b>", names.count()));
-    emit modified();
 }
 
 #include "installedpage.moc"

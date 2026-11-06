@@ -9,7 +9,7 @@ cmake_minimum_required( VERSION 3.5 )
 project( tdeflatpak )
 
 set( PACKAGE tdeflatpak )
-set( VERSION 0.1.0 )
+set( VERSION 0.2.0 )
 
 
 ##### include our cmake modules #################
@@ -43,6 +43,7 @@ find_package( TDE )
 
 pkg_check_modules( FLATPAK REQUIRED flatpak>=1.6 )
 pkg_check_modules( GIO REQUIRED gio-2.0 )
+pkg_check_modules( JSONGLIB REQUIRED json-glib-1.0 )
 
 find_package( ZLIB REQUIRED )
 
@@ -68,3 +69,9 @@ configure_file( config.h.cmake config.h @ONLY )
 add_subdirectory( src )
 add_subdirectory( icons )
 add_subdirectory( doc )
+
+option( BUILD_TESTS "Build the unit tests" OFF )
+if( BUILD_TESTS )
+  enable_testing( )
+  add_subdirectory( tests )
+endif( )

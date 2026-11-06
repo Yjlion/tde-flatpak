@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kcfg xmlns="http://www.kde.org/standards/kcfg/1.0"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.kde.org/standards/kcfg/1.0
+                          http://www.kde.org/standards/kcfg/1.0/kcfg.xsd">
+  <kcfgfile name="tdeflatpakrc"/>
+
+  <group name="General">
+    <entry name="DefaultScope" type="Enum">
+      <label>Installation used for new applications</label>
+      <choices>
+        <choice name="Ask"/>
+        <choice name="System"/>
+        <choice name="User"/>
+      </choices>
+      <default>Ask</default>
+    </entry>
+    <entry name="DeleteDataOnUninstall" type="Enum">
+      <label>Delete application data when uninstalling</label>
+      <choices>
+        <choice name="Ask"/>
+        <choice name="Never"/>
+        <choice name="Always"/>
+      </choices>
+      <default>Ask</default>
+    </entry>
+  </group>
+
+  <group name="Updates">
+    <entry name="UpdateCheckInterval" type="Int">
+      <label>Hours between automatic update checks (0 = never)</label>
+      <default>0</default>
+      <min>0</min>
+      <max>168</max>
+    </entry>
+  </group>
+
+  <group name="Catalog">
+    <entry name="CatalogMaxAge" type="Int">
+      <label>Hours before the AppStream catalog is downloaded again</label>
+      <default>24</default>
+      <min>1</min>
+      <max>720</max>
+    </entry>
+    <entry name="UseFlathubApi" type="Bool">
+      <label>Use the Flathub web service for app details and featured lists</label>
+      <default>true</default>
+    </entry>
+  </group>
+</kcfg>

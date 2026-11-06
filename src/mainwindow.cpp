@@ -5,6 +5,12 @@
  */
 
 #include "mainwindow.h"
+#include "appdetailsdialog.h"
+#include "catalog.h"
+#include "configdialog.h"
+#include "permissionswidget.h"
+#include "settings.h"
+#include "storepage.h"
 #include "installedpage.h"
 #include "searchpage.h"
 #include "updatespage.h"
@@ -26,6 +32,7 @@
 #include <tdepopupmenu.h>
 #include <kstatusbar.h>
 #include <kstdaction.h>
+#include <kstdguiitem.h>
 #include <ktabwidget.h>
 #include <kurl.h>
 #include <tdemenubar.h>
@@ -36,11 +43,13 @@ MainWindow::MainWindow()
     setCaption(i18n("Flatpak Manager"));
 
     m_tabs = new KTabWidget(this);
+    m_store = new StorePage(m_tabs, "browse");
     m_installed = new InstalledPage(m_tabs, "installed");
     m_search = new SearchPage(m_tabs, "search");
     m_updates = new UpdatesPage(m_tabs, "updates");
     m_remotes = new RemotesPage(m_tabs, "remotes");
 
+    m_tabs->addTab(m_store, SmallIconSet("view_icon"), i18n("Browse"));
     m_tabs->addTab(m_installed, SmallIconSet("system-software-update"), i18n("Installed"));
     m_tabs->addTab(m_search, SmallIconSet("edit-find"), i18n("Search & Install"));
     m_tabs->addTab(m_updates, SmallIconSet("view-refresh"), i18n("Updates"));
@@ -51,6 +60,7 @@ MainWindow::MainWindow()
     connect(m_installed, TQ_SIGNAL(installedChanged()), this, TQ_SLOT(slotInstalledChanged()));
     connect(m_installed, TQ_SIGNAL(modified()), this, TQ_SLOT(refreshAll()));
     connect(m_search, TQ_SIGNAL(modified()), this, TQ_SLOT(refreshAll()));
+    connect(m_store, TQ_SIGNAL(modified()), this, TQ_SLOT(refreshAll()));
     connect(m_updates, TQ_SIGNAL(modified()), this, TQ_SLOT(refreshAll()));
     connect(m_updates, TQ_SIGNAL(updatesAvailable(int)), this, TQ_SLOT(slotUpdatesAvailable(int)));
     connect(m_remotes, TQ_SIGNAL(modified()), this, TQ_SLOT(refreshAll()));
@@ -59,11 +69,24 @@ MainWindow::MainWindow()
 
     statusBar()->message(i18n("Using libflatpak %1").arg(FlatpakBackend::libraryVersion()));
 
-    m_installed->refresh();
-    m_remotes->refresh();
+    m_updateTimer = new TQTimer(this);
+    connect(m_updateTimer, TQ_SIGNAL(timeout()), this, TQ_SLOT(slotPeriodicUpdateCheck()));
 
-    resize(860, 560);
+    m_installed->refresh();
+    refreshRemotes();
+    slotSettingsChanged();
+
+    // the Installed page is the most useful start page; Browse loads on demand
+    m_tabs->showPage(m_installed);
+
+    resize(900, 600);
     setAutoSaveSettings();
+}
+
+void MainWindow::refreshRemotes()
+{
+    m_remotes->refresh();
+    Catalog::self()->setRemotes(m_remotes->remotes());
 }
 
 void MainWindow::setupActions()
@@ -94,7 +117,18 @@ void MainWindow::setupActions()
     a = new TDEAction(i18n("Remove &Unused Runtimes..."), "edit-clear", 0,
                       this, TQ_SLOT(slotRemoveUnused()), actionCollection(), "remove_unused");
     a->plug(toolsMenu);
+    toolsMenu->insertSeparator();
+    a = new TDEAction(i18n("Application &Permissions..."), "configure", 0,
+                      this, TQ_SLOT(slotPermissions()), actionCollection(), "permissions");
+    a->plug(toolsMenu);
     menuBar()->insertItem(i18n("&Tools"), toolsMenu);
+
+    TDEPopupMenu *settingsMenu = new TDEPopupMenu(this);
+    KStdAction::preferences(this, TQ_SLOT(slotConfigure()), actionCollection())->plug(settingsMenu);
+    a = new TDEAction(i18n("Open in &Control Center"), "kcontrol", 0,
+                      this, TQ_SLOT(slotControlCenter()), actionCollection(), "control_center");
+    a->plug(settingsMenu);
+    menuBar()->insertItem(i18n("&Settings"), settingsMenu);
 
     menuBar()->insertItem(i18n("&Help"), helpMenu());
 }
@@ -102,7 +136,7 @@ void MainWindow::setupActions()
 void MainWindow::refreshAll()
 {
     m_installed->refresh();
-    m_remotes->refresh();
+    refreshRemotes();
     if (m_tabs->currentPage() == m_updates) {
         m_updates->checkForUpdates();
     }
@@ -110,7 +144,7 @@ void MainWindow::refreshAll()
 
 void MainWindow::slotInstalledChanged()
 {
-    m_search->setInstalled(m_installed->installedRefs());
+    Catalog::self()->setInstalled(m_installed->installedRefs());
 }
 
 void MainWindow::slotUpdatesAvailable(int count)
@@ -120,11 +154,18 @@ void MainWindow::slotUpdatesAvailable(int count)
 
 void MainWindow::slotCurrentChanged(TQWidget *page)
 {
-    if (page == m_search) {
+    if (page == m_store) {
+        m_store->ensureLoaded();
+    } else if (page == m_search) {
         m_search->ensureLoaded();
     } else if (page == m_updates) {
         m_updates->ensureChecked();
     }
+}
+
+void MainWindow::showBrowse()
+{
+    m_tabs->showPage(m_store);
 }
 
 void MainWindow::showSearch()
@@ -163,6 +204,104 @@ void MainWindow::slotAddFlathub()
 void MainWindow::slotRemoveUnused()
 {
     m_remotes->removeUnused();
+}
+
+void MainWindow::slotPermissions()
+{
+    TQString appId = TQString::null;   // all applications
+    if (PermissionsDialog::edit(this, appId)) {
+        refreshAll();
+    }
+}
+
+void MainWindow::slotConfigure()
+{
+    ConfigDialog dlg(this);
+    connect(&dlg, TQ_SIGNAL(settingsChanged()), this, TQ_SLOT(slotSettingsChanged()));
+    dlg.exec();
+}
+
+void MainWindow::slotControlCenter()
+{
+    TQString error;
+    if (TDEApplication::tdeinitExec("tdecmshell", TQStringList("tdeflatpak-settings"), &error) != 0) {
+        KMessageBox::error(this, i18n("Could not start the Control Center module:\n%1").arg(error));
+    }
+}
+
+void MainWindow::slotSettingsChanged()
+{
+    TdeFlatpakSettings::self()->readConfig();
+    m_store->settingsChanged();
+    const int hours = TdeFlatpakSettings::updateCheckInterval();
+    if (hours > 0) {
+        m_updateTimer->start(hours * 3600 * 1000);
+        // first check shortly after start, without waiting a full interval
+        if (!m_updates->updateCount()) {
+            TQTimer::singleShot(30 * 1000, this, TQ_SLOT(slotPeriodicUpdateCheck()));
+        }
+    } else {
+        m_updateTimer->stop();
+    }
+}
+
+void MainWindow::slotPeriodicUpdateCheck()
+{
+    m_updates->checkInBackground();
+}
+
+void MainWindow::showDetails(const TQString &appId)
+{
+    m_pendingDetails = appId;
+    Catalog *catalog = Catalog::self();
+    if (catalog->isLoaded()) {
+        TQTimer::singleShot(0, this, TQ_SLOT(slotShowPendingDetails()));
+    } else {
+        connect(catalog, TQ_SIGNAL(loaded(bool)), this, TQ_SLOT(slotShowPendingDetails()));
+        catalog->ensureLoaded();
+    }
+}
+
+void MainWindow::slotShowPendingDetails()
+{
+    disconnect(Catalog::self(), TQ_SIGNAL(loaded(bool)), this, TQ_SLOT(slotShowPendingDetails()));
+    const TQString appId = m_pendingDetails;
+    m_pendingDetails = TQString::null;
+    if (appId.isEmpty()) {
+        return;
+    }
+    const FpApp *app = Catalog::self()->findById(appId);
+    const FpInstalledRef *installed = 0;
+    const FpInstalledRefList &refs = m_installed->installedRefs();
+    for (FpInstalledRefList::ConstIterator it = refs.begin(); it != refs.end(); ++it) {
+        if ((*it).isApp && (*it).id == appId) {
+            installed = &(*it);
+            break;
+        }
+    }
+    if (!app && !installed) {
+        KMessageBox::sorry(this, i18n("The application %1 is neither installed nor available from a remote.").arg(appId));
+        return;
+    }
+    const FpInstalledRef copy = installed ? *installed : FpInstalledRef();
+    if (AppDetailsDialog::showDetails(this, app, installed ? &copy : 0)) {
+        refreshAll();
+    }
+}
+
+void MainWindow::showPermissions(const TQString &appId)
+{
+    m_pendingPermissions = appId;
+    TQTimer::singleShot(0, this, TQ_SLOT(slotShowPendingPermissions()));
+}
+
+void MainWindow::slotShowPendingPermissions()
+{
+    const TQString appId = m_pendingPermissions;
+    m_pendingPermissions = TQString::null;
+    if (PermissionsDialog::edit(this, appId)) {
+        refreshAll();
+    }
 }
 
 void MainWindow::slotOpenFile()
@@ -220,16 +359,28 @@ void MainWindow::installFlatpakref(const KURL &url)
         }
     }
 
-    int answer = KMessageBox::questionYesNoCancel(this,
-        i18n("<qt>Install <b>%1</b>?<br><br>"
-             "A system-wide installation is available to all users; a user installation only to you.</qt>").arg(title),
-        i18n("Install"),
-        KGuiItem(i18n("&System-wide"), "system"),
-        KGuiItem(i18n("For &Me Only"), "user"));
-    if (answer == KMessageBox::Cancel) {
-        return;
+    int scope;
+    const int pref = TdeFlatpakSettings::defaultScope();
+    if (pref == TdeFlatpakSettings::EnumDefaultScope::System || pref == TdeFlatpakSettings::EnumDefaultScope::User) {
+        scope = (pref == TdeFlatpakSettings::EnumDefaultScope::System) ? FpScopeSystem : FpScopeUser;
+        if (KMessageBox::questionYesNo(this,
+                i18n("<qt>Install <b>%1</b> (%2 installation)?</qt>").arg(title)
+                    .arg(FlatpakBackend::scopeName(scope).lower()),
+                i18n("Install"), KGuiItem(i18n("&Install"), "go-down"), KStdGuiItem::cancel()) != KMessageBox::Yes) {
+            return;
+        }
+    } else {
+        int answer = KMessageBox::questionYesNoCancel(this,
+            i18n("<qt>Install <b>%1</b>?<br><br>"
+                 "A system-wide installation is available to all users; a user installation only to you.</qt>").arg(title),
+            i18n("Install"),
+            KGuiItem(i18n("&System-wide"), "system"),
+            KGuiItem(i18n("For &Me Only"), "user"));
+        if (answer == KMessageBox::Cancel) {
+            return;
+        }
+        scope = (answer == KMessageBox::Yes) ? FpScopeSystem : FpScopeUser;
     }
-    int scope = (answer == KMessageBox::Yes) ? FpScopeSystem : FpScopeUser;
 
     FlatpakJob *job = new FlatpakJob(FlatpakJob::Transaction, 0);
     job->addInstallFlatpakref(scope, data);

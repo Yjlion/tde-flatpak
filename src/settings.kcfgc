@@ -1,0 +1,4 @@
+File=settings.kcfg
+ClassName=TdeFlatpakSettings
+Singleton=true
+Mutators=true
