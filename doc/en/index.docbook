@@ -1,0 +1,433 @@
+<?xml version="1.0" ?>
+<!DOCTYPE book PUBLIC "-//KDE//DTD DocBook XML V4.2-Based Variant V1.1//EN" "dtd/kdex.dtd" [
+  <!ENTITY kappname "<application>Flatpak Manager</application>">
+  <!ENTITY package "tdeflatpak">
+  <!ENTITY % addindex "IGNORE">
+  <!ENTITY % English "INCLUDE">
+]>
+
+<book lang="&language;">
+
+<bookinfo>
+<title>The Flatpak Manager Handbook</title>
+
+<authorgroup>
+<author><othername>tdeflatpak contributors</othername></author>
+<!-- TRANS:ROLES_OF_TRANSLATORS -->
+</authorgroup>
+
+<copyright>
+<year>2026</year>
+<holder>tdeflatpak contributors</holder>
+</copyright>
+
+<legalnotice>&underGPL;</legalnotice>
+
+<date>2026-11-05</date>
+<releaseinfo>0.1.0</releaseinfo>
+
+<abstract>
+<para>&kappname; (<command>tdeflatpak</command>) is a graphical tool for
+the Trinity Desktop Environment (TDE) that installs, updates and removes
+Flatpak applications and manages Flatpak remotes.</para>
+</abstract>
+
+<keywordset>
+<keyword>TDE</keyword>
+<keyword>Trinity</keyword>
+<keyword>Flatpak</keyword>
+<keyword>Flathub</keyword>
+<keyword>tdeflatpak</keyword>
+<keyword>software</keyword>
+</keywordset>
+
+</bookinfo>
+
+<!-- ================================================================ -->
+<chapter id="introduction">
+<title>Introduction</title>
+
+<para><ulink url="https://flatpak.org">Flatpak</ulink> is a system for
+distributing desktop applications on Linux. Applications run in a sandbox
+and bring their own libraries in shared <emphasis>runtimes</emphasis>, so
+they work on many distributions. Applications and runtimes are downloaded
+from <emphasis>remotes</emphasis> (repositories). The best known remote is
+<ulink url="https://flathub.org">Flathub</ulink>.</para>
+
+<para>&kappname; is a native TDE front end for Flatpak. It uses the
+<application>libflatpak</application> library directly, the same way
+<application>GNOME Software</application> and Plasma
+<application>Discover</application> do, and it can:</para>
+
+<itemizedlist>
+<listitem><para>list, start and uninstall installed applications and runtimes;</para></listitem>
+<listitem><para>search the catalogs of all remotes and install applications;</para></listitem>
+<listitem><para>check for and install updates;</para></listitem>
+<listitem><para>add, enable, disable and remove remotes, and add Flathub with one click;</para></listitem>
+<listitem><para>remove runtimes that are no longer used;</para></listitem>
+<listitem><para>open <filename>.flatpakref</filename> and <filename>.flatpakrepo</filename> files.</para></listitem>
+</itemizedlist>
+
+<important>
+<title>Disclaimer</title>
+<para>This application was largely <quote>vibe coded</quote> with the help
+of an AI coding assistant. It has not been thoroughly reviewed or tested,
+may contain bugs and can modify the Flatpak installations on your system.
+It is provided as-is, without any warranty. Use it at your own risk.</para>
+</important>
+
+<sect1 id="installations">
+<title>User and System Installations</title>
+
+<para>Flatpak keeps two separate <emphasis>installations</emphasis>:</para>
+
+<variablelist>
+<varlistentry>
+<term>System</term>
+<listitem><para>Located in <filename>/var/lib/flatpak</filename> and
+shared by all users. Changing it requires administrator authorization,
+which is requested through <application>polkit</application>. A polkit
+authentication agent such as <application>polkit-agent-tde</application>
+must be running in your session for the password dialog to appear.</para></listitem>
+</varlistentry>
+<varlistentry>
+<term>User</term>
+<listitem><para>Located in <filename>~/.local/share/flatpak</filename>
+and only available to you. No password is needed.</para></listitem>
+</varlistentry>
+</variablelist>
+
+<para>&kappname; shows both installations at once. The
+<guilabel>Installation</guilabel> column tells you which one an item
+belongs to.</para>
+</sect1>
+
+</chapter>
+
+<!-- ================================================================ -->
+<chapter id="using">
+<title>Using &kappname;</title>
+
+<para>Start &kappname; from the TDE menu
+(<menuchoice><guimenu>System</guimenu><guimenuitem>Flatpak Manager</guimenuitem></menuchoice>)
+or by running <command>tdeflatpak</command>. The main window has four
+tabs.</para>
+
+<sect1 id="installed-tab">
+<title>The Installed Tab</title>
+
+<screenshot>
+<screeninfo>The Installed tab</screeninfo>
+<mediaobject>
+<imageobject><imagedata fileref="installed.png" format="PNG"/></imageobject>
+<textobject><phrase>The Installed tab</phrase></textobject>
+</mediaobject>
+</screenshot>
+
+<para>This tab lists every installed application with its name, ID,
+version, branch, origin remote, installation and disk usage. Type in the
+<guilabel>Filter</guilabel> field to narrow the list. Check
+<guilabel>Show runtimes</guilabel> to include runtimes and extensions as
+well.</para>
+
+<variablelist>
+<varlistentry>
+<term><guibutton>Run</guibutton></term>
+<listitem><para>Starts the selected application. Double-clicking an
+application does the same.</para></listitem>
+</varlistentry>
+<varlistentry>
+<term><guibutton>Uninstall</guibutton></term>
+<listitem><para>Removes the selected items after asking for
+confirmation. You can select several items at once.</para></listitem>
+</varlistentry>
+<varlistentry>
+<term><guibutton>Refresh</guibutton></term>
+<listitem><para>Reloads the list, for example after you changed
+something with the <command>flatpak</command> command line tool.</para></listitem>
+</varlistentry>
+</variablelist>
+</sect1>
+
+<sect1 id="search-tab">
+<title>The Search &amp; Install Tab</title>
+
+<screenshot>
+<screeninfo>Searching for applications</screeninfo>
+<mediaobject>
+<imageobject><imagedata fileref="search.png" format="PNG"/></imageobject>
+<textobject><phrase>The Search &amp; Install tab</phrase></textobject>
+</mediaobject>
+</screenshot>
+
+<para>When you open this tab for the first time, &kappname; loads the
+application catalogs (AppStream data) of all enabled remotes. Catalogs
+older than one day are downloaded again automatically. Use
+<guibutton>Refresh Catalog</guibutton> to force a download.</para>
+
+<para>Type one or more words in the <guilabel>Search</guilabel> field.
+An application matches if every word appears in its name, ID or summary.
+At most 300 results are shown, so refine your search if needed.</para>
+
+<para>Select one or more applications and press
+<guibutton>Install</guibutton>, or double-click an application. Each
+application is installed into the installation that its remote belongs
+to, together with any runtimes it needs. Applications that are already
+installed are marked <guilabel>Installed</guilabel>.</para>
+</sect1>
+
+<sect1 id="updates-tab">
+<title>The Updates Tab</title>
+
+<screenshot>
+<screeninfo>Available updates</screeninfo>
+<mediaobject>
+<imageobject><imagedata fileref="updates.png" format="PNG"/></imageobject>
+<textobject><phrase>The Updates tab</phrase></textobject>
+</mediaobject>
+</screenshot>
+
+<para>The first time you open this tab, &kappname; checks all remotes
+for updates. The number of available updates is shown in the tab title.
+<guibutton>Check for Updates</guibutton> checks again.</para>
+
+<para>Uncheck the items you do not want to update and press
+<guibutton>Update Selected</guibutton>, or press
+<guibutton>Update All</guibutton>.</para>
+</sect1>
+
+<sect1 id="remotes-tab">
+<title>The Remotes Tab</title>
+
+<screenshot>
+<screeninfo>Configured remotes</screeninfo>
+<mediaobject>
+<imageobject><imagedata fileref="remotes.png" format="PNG"/></imageobject>
+<textobject><phrase>The Remotes tab</phrase></textobject>
+</mediaobject>
+</screenshot>
+
+<para>This tab lists the configured remotes of both installations.</para>
+
+<variablelist>
+<varlistentry>
+<term><guibutton>Add...</guibutton></term>
+<listitem><para>Opens the <guilabel>Add Remote</guilabel> dialog,
+described below.</para></listitem>
+</varlistentry>
+<varlistentry>
+<term><guibutton>Add Flathub</guibutton></term>
+<listitem><para>Adds the Flathub remote. You are asked whether to add it
+system-wide or only for you.</para></listitem>
+</varlistentry>
+<varlistentry>
+<term><guibutton>Disable</guibutton> / <guibutton>Enable</guibutton></term>
+<listitem><para>A disabled remote is kept but not used for searching,
+installing or updating.</para></listitem>
+</varlistentry>
+<varlistentry>
+<term><guibutton>Remove</guibutton></term>
+<listitem><para>Deletes the selected remote. Flatpak refuses to do this
+while applications installed from it are still present.</para></listitem>
+</varlistentry>
+<varlistentry>
+<term><guibutton>Remove Unused...</guibutton></term>
+<listitem><para>Uninstalls runtimes and extensions that are no longer
+needed by any installed application, in both installations.</para></listitem>
+</varlistentry>
+</variablelist>
+
+<screenshot>
+<screeninfo>The Add Remote dialog</screeninfo>
+<mediaobject>
+<imageobject><imagedata fileref="add-remote.png" format="PNG"/></imageobject>
+<textobject><phrase>The Add Remote dialog</phrase></textobject>
+</mediaobject>
+</screenshot>
+
+<para>In the <guilabel>Add Remote</guilabel> dialog, enter the
+<guilabel>Location</guilabel> of a <filename>.flatpakrepo</filename> file
+(a local file or a URL). This is the recommended way, because the file
+contains the repository's signing key. You can also enter the plain URL of
+a Flatpak repository. In that case, leave <guilabel>Verify GPG
+signatures</guilabel> enabled unless you know the repository is
+unsigned. Choose a <guilabel>Name</guilabel> and the
+<guilabel>Installation</guilabel> the remote should be added to.</para>
+</sect1>
+
+<sect1 id="operations">
+<title>The Progress Dialog</title>
+
+<screenshot>
+<screeninfo>An operation in progress</screeninfo>
+<mediaobject>
+<imageobject><imagedata fileref="operation.png" format="PNG"/></imageobject>
+<textobject><phrase>The progress dialog</phrase></textobject>
+</mediaobject>
+</screenshot>
+
+<para>Installing, updating and uninstalling are shown in a progress
+dialog. It reports the current step, the overall progress and a detailed
+log. Press <guibutton>Cancel</guibutton> to stop the operation. When it is
+finished, the button changes to <guibutton>Close</guibutton>.</para>
+</sect1>
+
+<sect1 id="files">
+<title>Opening Flatpak Files</title>
+
+<para>Websites often offer applications as <filename>.flatpakref</filename>
+files and repositories as <filename>.flatpakrepo</filename> files.
+&kappname; is registered for both file types, so clicking such a file in
+<application>Konqueror</application> opens it. You can also use
+<menuchoice><guimenu>File</guimenu><guimenuitem>Open Flatpak File...</guimenuitem></menuchoice>.</para>
+
+<itemizedlist>
+<listitem><para>For a <filename>.flatpakref</filename> file you are asked
+whether to install the application system-wide or only for you. Any
+remote the application needs is added automatically.</para></listitem>
+<listitem><para>For a <filename>.flatpakrepo</filename> file, the
+<guilabel>Add Remote</guilabel> dialog opens with the file already
+filled in.</para></listitem>
+</itemizedlist>
+</sect1>
+
+</chapter>
+
+<!-- ================================================================ -->
+<chapter id="commands">
+<title>Command Reference</title>
+
+<sect1 id="menus">
+<title>Menus</title>
+
+<variablelist>
+<varlistentry>
+<term><menuchoice><shortcut><keycombo action="simul">&Ctrl;<keycap>O</keycap></keycombo></shortcut>
+<guimenu>File</guimenu><guimenuitem>Open Flatpak File...</guimenuitem></menuchoice></term>
+<listitem><para>Opens a <filename>.flatpakref</filename> or
+<filename>.flatpakrepo</filename> file.</para></listitem>
+</varlistentry>
+<varlistentry>
+<term><menuchoice><shortcut><keycombo action="simul">&Ctrl;<keycap>Q</keycap></keycombo></shortcut>
+<guimenu>File</guimenu><guimenuitem>Quit</guimenuitem></menuchoice></term>
+<listitem><para>Quits &kappname;.</para></listitem>
+</varlistentry>
+<varlistentry>
+<term><menuchoice><shortcut><keycap>F5</keycap></shortcut>
+<guimenu>Tools</guimenu><guimenuitem>Refresh</guimenuitem></menuchoice></term>
+<listitem><para>Reloads the installed applications and remotes.</para></listitem>
+</varlistentry>
+<varlistentry>
+<term><menuchoice><guimenu>Tools</guimenu><guimenuitem>Check for Updates</guimenuitem></menuchoice></term>
+<listitem><para>Switches to the Updates tab and checks for updates.</para></listitem>
+</varlistentry>
+<varlistentry>
+<term><menuchoice><guimenu>Tools</guimenu><guimenuitem>Refresh Application Catalog</guimenuitem></menuchoice></term>
+<listitem><para>Downloads the application catalogs of all remotes again.</para></listitem>
+</varlistentry>
+<varlistentry>
+<term><menuchoice><guimenu>Tools</guimenu><guimenuitem>Add Flathub Remote...</guimenuitem></menuchoice></term>
+<listitem><para>Adds the Flathub remote.</para></listitem>
+</varlistentry>
+<varlistentry>
+<term><menuchoice><guimenu>Tools</guimenu><guimenuitem>Remove Unused Runtimes...</guimenuitem></menuchoice></term>
+<listitem><para>Uninstalls runtimes that are no longer used.</para></listitem>
+</varlistentry>
+</variablelist>
+
+<para>The <guimenu>Help</guimenu> menu is the standard TDE help menu.</para>
+</sect1>
+
+<sect1 id="command-line">
+<title>Command Line Options</title>
+
+<cmdsynopsis>
+<command>tdeflatpak</command>
+<group choice="opt"><option>--updates</option></group>
+<group choice="opt"><option>--search</option></group>
+<group choice="opt"><option>--remotes</option></group>
+<arg choice="opt"><replaceable>file</replaceable></arg>
+</cmdsynopsis>
+
+<variablelist>
+<varlistentry>
+<term><option>--updates</option></term>
+<listitem><para>Start with the Updates tab.</para></listitem>
+</varlistentry>
+<varlistentry>
+<term><option>--search</option></term>
+<listitem><para>Start with the Search &amp; Install tab.</para></listitem>
+</varlistentry>
+<varlistentry>
+<term><option>--remotes</option></term>
+<listitem><para>Start with the Remotes tab.</para></listitem>
+</varlistentry>
+<varlistentry>
+<term><replaceable>file</replaceable></term>
+<listitem><para>A <filename>.flatpakref</filename> or
+<filename>.flatpakrepo</filename> file (path or URL) to open.</para></listitem>
+</varlistentry>
+</variablelist>
+
+<para>The generic TDE and TQt options are also accepted; see
+<command>tdeflatpak --help-all</command>.</para>
+</sect1>
+
+</chapter>
+
+<!-- ================================================================ -->
+<chapter id="faq">
+<title>Questions and Answers</title>
+
+<qandaset id="faqlist">
+<qandaentry>
+<question><para>Nothing happens or I get <quote>not authorized</quote>
+when installing system-wide.</para></question>
+<answer><para>System-wide changes require a polkit authentication agent.
+Install <application>polkit-agent-tde</application> and log in again, or
+use the user installation instead.</para></answer>
+</qandaentry>
+<qandaentry>
+<question><para>The Search tab says that no remotes are configured.</para></question>
+<answer><para>Add a remote on the Remotes tab, for example with
+<guibutton>Add Flathub</guibutton>, then press
+<guibutton>Refresh Catalog</guibutton>.</para></answer>
+</qandaentry>
+<qandaentry>
+<question><para>File dialogs in Flatpak applications look wrong or do not
+open.</para></question>
+<answer><para>Flatpak applications use the XDG desktop portals for file
+dialogs and similar services. Install
+<application>xdg-desktop-portal-trinity</application> so that they use TDE
+dialogs.</para></answer>
+</qandaentry>
+<qandaentry>
+<question><para>An application I just installed is not in the TDE menu.</para></question>
+<answer><para>Flatpak exports menu entries to
+<filename>/var/lib/flatpak/exports/share</filename> and
+<filename>~/.local/share/flatpak/exports/share</filename>. These directories
+must be in <envar>XDG_DATA_DIRS</envar>, which the Debian
+<application>flatpak</application> package sets up at login. Log out and
+in again after installing Flatpak for the first time.</para></answer>
+</qandaentry>
+</qandaset>
+</chapter>
+
+<!-- ================================================================ -->
+<chapter id="credits">
+<title>Credits and License</title>
+
+<para>&kappname; is developed at
+<ulink url="https://github.com/Yjlion/tde-flatpak">https://github.com/Yjlion/tde-flatpak</ulink>.
+Please report problems there.</para>
+
+<para>Program and documentation copyright 2026 tdeflatpak contributors.
+Its design takes ideas from the Flatpak plugin of GNOME Software and the
+Flatpak backend of Plasma Discover.</para>
+
+<!-- TRANS:CREDIT_FOR_TRANSLATORS -->
+
+&underGPL;
+</chapter>
+
+</book>

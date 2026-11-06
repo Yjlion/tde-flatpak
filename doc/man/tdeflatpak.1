@@ -1,0 +1,105 @@
+.\" Man page for tdeflatpak
+.\" SPDX-License-Identifier: GPL-2.0-or-later
+.TH TDEFLATPAK 1 "November 2026" "tdeflatpak 0.1.0" "Trinity Desktop Environment"
+.SH NAME
+tdeflatpak \- Flatpak manager for the Trinity Desktop Environment
+.SH SYNOPSIS
+.B tdeflatpak
+.RB [ \-\-updates | \-\-search | \-\-remotes ]
+.RI [ "generic TDE and TQt options" ]
+.RI [ file ]
+.SH DESCRIPTION
+.B tdeflatpak
+(\(lqFlatpak Manager\(rq) is a graphical application for the Trinity Desktop
+Environment (TDE) that manages Flatpak applications, runtimes and remotes.
+It uses the libflatpak library directly and works on both the system-wide
+installation
+.RI ( /var/lib/flatpak )
+and the per-user installation
+.RI ( ~/.local/share/flatpak ).
+.PP
+The main window has four tabs:
+.TP
+.B Installed
+Lists installed applications (and optionally runtimes).
+Applications can be started and items can be uninstalled.
+.TP
+.B Search & Install
+Searches the AppStream catalogs of all enabled remotes by name, ID or
+summary, and installs the selected applications together with the runtimes
+they need.
+.TP
+.B Updates
+Checks for updates and installs all or only the selected ones.
+.TP
+.B Remotes
+Lists remotes. Remotes can be added (from a
+.I .flatpakrepo
+file or URL, or Flathub with one click), enabled, disabled and removed.
+Unused runtimes can be removed.
+.PP
+Changes to the system-wide installation require authorization through
+polkit, so a polkit authentication agent such as
+.B polkit\-agent\-tde
+must be running.
+.SH OPTIONS
+.TP
+.B \-\-updates
+Start with the Updates tab.
+.TP
+.B \-\-search
+Start with the Search & Install tab.
+.TP
+.B \-\-remotes
+Start with the Remotes tab.
+.TP
+.I file
+A
+.I .flatpakref
+file (install the application it describes) or a
+.I .flatpakrepo
+file (add the remote it describes). Local paths and URLs are accepted.
+.PP
+The generic TDE and TQt options are also supported; run
+.B tdeflatpak \-\-help\-all
+for the complete list.
+.SH EXAMPLES
+.TP
+.B tdeflatpak \-\-updates
+Open the Flatpak Manager and check for updates.
+.TP
+.B tdeflatpak https://dl.flathub.org/repo/flathub.flatpakrepo
+Add the Flathub remote.
+.TP
+.B tdeflatpak org.example.App.flatpakref
+Install an application from a downloaded
+.I .flatpakref
+file.
+.SH FILES
+.TP
+.I /var/lib/flatpak
+System-wide Flatpak installation.
+.TP
+.I ~/.local/share/flatpak
+Per-user Flatpak installation.
+.TP
+.I ~/.trinity/share/config/tdeflatpakrc
+Window settings.
+.SH DISCLAIMER
+This application was largely \(lqvibe coded\(rq with the help of an AI coding
+assistant. It has not been thoroughly reviewed or tested, may contain bugs
+and can modify the Flatpak installations on your system. It is provided
+as-is, without any warranty. Use it at your own risk.
+.SH SEE ALSO
+.BR flatpak (1),
+.BR flatpak\-remote\-add (1),
+.BR flatpak\-install (1)
+.PP
+The Flatpak Manager Handbook, available in KHelpCenter as
+.IR help:/tdeflatpak .
+.SH BUGS
+Please report bugs at
+.UR https://github.com/Yjlion/tde-flatpak/issues
+.UE .
+.SH AUTHORS
+tdeflatpak contributors.

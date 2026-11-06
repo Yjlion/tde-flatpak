@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Flatpak Manager
+GenericName=Flatpak Manager
+Comment=Manage Flatpak applications, runtimes and remotes
+Exec=tdeflatpak %U
+Icon=tdeflatpak
+Terminal=false
+Categories=Qt;TDE;System;PackageManager;
+MimeType=application/vnd.flatpak.ref;application/vnd.flatpak.repo;
+Keywords=flatpak;flathub;software;install;update;package;
+X-DocPath=tdeflatpak/index.html
