@@ -1,11 +1,15 @@
 .\" Man page for tdeflatpak
 .\" SPDX-License-Identifier: GPL-2.0-or-later
-.TH TDEFLATPAK 1 "November 2026" "tdeflatpak 0.1.0" "Trinity Desktop Environment"
+.TH TDEFLATPAK 1 "November 2026" "tdeflatpak 0.2.0" "Trinity Desktop Environment"
 .SH NAME
 tdeflatpak \- Flatpak manager for the Trinity Desktop Environment
 .SH SYNOPSIS
 .B tdeflatpak
-.RB [ \-\-updates | \-\-search | \-\-remotes ]
+.RB [ \-\-browse | \-\-updates | \-\-search | \-\-remotes ]
+.RB [ \-\-details
+.IR app-id ]
+.RB [ \-\-permissions
+.IR app-id ]
 .RI [ "generic TDE and TQt options" ]
 .RI [ file ]
 .SH DESCRIPTION
@@ -18,11 +22,18 @@ installation
 and the per-user installation
 .RI ( ~/.local/share/flatpak ).
 .PP
-The main window has four tabs:
+The main window has five tabs:
+.TP
+.B Browse
+An app store view of the catalog, by category. For Flathub it also shows
+the Popular, Trending, New and Recently Updated lists of the Flathub web
+service.
 .TP
 .B Installed
 Lists installed applications (and optionally runtimes).
-Applications can be started and items can be uninstalled.
+Applications can be started, their details shown and their permissions
+edited; items can be uninstalled, application updates blocked and runtimes
+pinned.
 .TP
 .B Search & Install
 Searches the AppStream catalogs of all enabled remotes by name, ID or
@@ -38,11 +49,25 @@ Lists remotes. Remotes can be added (from a
 file or URL, or Flathub with one click), enabled, disabled and removed.
 Unused runtimes can be removed.
 .PP
+The details dialog shows the description, screenshots, releases, sizes,
+download count and requested permissions of an application.
+The permission editor changes what an application may access for the
+current user (the same files
+.B flatpak override \-\-user
+writes), revokes portal permissions, deletes the application's data and
+blocks its updates.
+The settings and the permission editor are also available in the Trinity
+Control Center
+.RB ( "tdecmshell tdeflatpak\-settings" ).
+.PP
 Changes to the system-wide installation require authorization through
 polkit, so a polkit authentication agent such as
 .B polkit\-agent\-tde
 must be running.
 .SH OPTIONS
+.TP
+.B \-\-browse
+Start with the Browse tab.
 .TP
 .B \-\-updates
 Start with the Updates tab.
@@ -52,6 +77,16 @@ Start with the Search & Install tab.
 .TP
 .B \-\-remotes
 Start with the Remotes tab.
+.TP
+.BI \-\-details " app-id"
+Show the details of the application
+.IR app-id ,
+for example
+.IR org.gimp.GIMP .
+.TP
+.BI \-\-permissions " app-id"
+Open the permission editor for the installed application
+.IR app-id .
 .TP
 .I file
 A
@@ -67,6 +102,9 @@ for the complete list.
 .TP
 .B tdeflatpak \-\-updates
 Open the Flatpak Manager and check for updates.
+.TP
+.B tdeflatpak \-\-permissions org.mozilla.firefox
+Change what Firefox may access.
 .TP
 .B tdeflatpak https://dl.flathub.org/repo/flathub.flatpakrepo
 Add the Flathub remote.
@@ -84,7 +122,18 @@ System-wide Flatpak installation.
 Per-user Flatpak installation.
 .TP
 .I ~/.trinity/share/config/tdeflatpakrc
-Window settings.
+Settings and window state.
+.TP
+.I ~/.local/share/flatpak/overrides/
+Per-user permission overrides
+.RI ( global
+applies to all applications).
+.TP
+.I ~/.var/app/
+Per-application data.
+.TP
+.I ~/.trinity/cache\-*/tdeflatpak/
+Cached Flathub web service responses and images.
 .SH DISCLAIMER
 This application was largely \(lqvibe coded\(rq with the help of an AI coding
 assistant. It has not been thoroughly reviewed or tested, may contain bugs
@@ -93,7 +142,10 @@ as-is, without any warranty. Use it at your own risk.
 .SH SEE ALSO
 .BR flatpak (1),
 .BR flatpak\-remote\-add (1),
-.BR flatpak\-install (1)
+.BR flatpak\-install (1),
+.BR flatpak\-override (1),
+.BR flatpak\-permission\-show (1),
+.BR flatpak\-mask (1)
 .PP
 The Flatpak Manager Handbook, available in KHelpCenter as
 .IR help:/tdeflatpak .
