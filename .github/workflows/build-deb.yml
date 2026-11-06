@@ -23,11 +23,23 @@ jobs:
       - name: Build package (Docker, Debian Trixie)
         run: scripts/build-deb.sh
 
+      - name: Unit tests
+        run: |
+          docker run --rm -v "$PWD":/src:ro "$IMAGE" bash -euc '
+            cmake -S /src -B /tmp/b -DCMAKE_INSTALL_PREFIX=/opt/trinity -DBUILD_TESTS=ON >/dev/null
+            cmake --build /tmp/b --target tdeflatpak-unittests -j"$(nproc)" >/dev/null
+            HOME=/tmp/h /tmp/b/tests/tdeflatpak-unittests'
+
       - name: GUI transaction test (install/uninstall via .flatpakref)
         run: |
           mkdir -p screenshots
           docker run --rm -v "$PWD":/src:ro -v "$PWD/screenshots":/shots "$IMAGE" \
             bash /src/tests/transaction-test.sh /shots
+
+      - name: GUI features test (details, browse, permissions, Control Center module)
+        run: |
+          docker run --rm -v "$PWD":/src:ro -v "$PWD/screenshots":/shots "$IMAGE" \
+            bash /src/tests/features-test.sh /shots
 
       - name: GUI smoke test
         run: |

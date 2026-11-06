@@ -73,7 +73,8 @@ public:
         CheckUpdates,    ///< list installed refs that have updates
         AddRemote,
         RemoveRemote,
-        SetRemoteDisabled
+        SetRemoteDisabled,
+        SetConfig        ///< set an installation config key (masked, pinned)
     };
 
     FlatpakJob(Kind kind, TQObject *receiver);
@@ -97,6 +98,12 @@ public:
     // ---- LoadCatalog parameters ------------------------------------------
     void setForceRefresh(bool force) { m_forceRefresh = force; }
     void setLanguage(const TQString &lang) { m_lang = lang; }
+    /** Download the AppStream data again when it is older than this. */
+    void setCatalogMaxAge(int hours) { m_catalogMaxAge = hours; }
+
+    // ---- SetConfig parameters ----------------------------------------------
+    /** Set @p key of the installation @p scope to @p value (empty value unsets it). */
+    void setConfig(int scope, const TQString &key, const TQString &value);
 
     // ---- Remote parameters ------------------------------------------------
     /** Add a remote from .flatpakrepo file contents. */
@@ -143,6 +150,7 @@ private:
     bool runAddRemote();
     bool runRemoveRemote();
     bool runSetRemoteDisabled();
+    bool runSetConfig();
 
     Kind m_kind;
     TQObject *m_receiver;
@@ -153,6 +161,10 @@ private:
 
     bool m_forceRefresh;
     TQString m_lang;
+    int m_catalogMaxAge;
+
+    TQString m_configKey;
+    TQString m_configValue;
 
     int m_remoteScope;
     TQString m_remoteName;

@@ -1,5 +1,5 @@
 /*
- * tdeflatpak - "Search" page: browse and install applications from remotes.
+ * tdeflatpak - "Search" page: search and install applications from remotes.
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
  */
@@ -18,7 +18,6 @@ class TQTimer;
 class TDEListView;
 class KLineEdit;
 class KPushButton;
-class FlatpakJob;
 
 class SearchPage : public TQWidget
 {
@@ -26,10 +25,6 @@ class SearchPage : public TQWidget
 
 public:
     SearchPage(TQWidget *parent = 0, const char *name = 0);
-    ~SearchPage();
-
-    /** Update the set of installed refs used to mark installed results. */
-    void setInstalled(const FpInstalledRefList &refs);
 
 public slots:
     /** Load the catalog if not done yet. */
@@ -40,32 +35,31 @@ public slots:
 signals:
     void modified();
 
-protected:
-    virtual void customEvent(TQCustomEvent *ev);
-
 private slots:
     void slotSearch();
     void slotTextChanged(const TQString &);
     void slotSelectionChanged();
     void slotInstall();
+    void slotDetails();
     void slotDoubleClicked(TQListViewItem *item);
+    void slotContextMenu(TDEListView *, TQListViewItem *item, const TQPoint &pos);
+    void slotCatalogLoading();
+    void slotCatalogProgress(const TQString &remote);
+    void slotCatalogLoaded(bool ok);
 
 private:
-    void loadCatalog(bool force);
-    void setBusy(bool busy, const TQString &text = TQString::null);
+    void setBusy(bool busy);
 
     KLineEdit *m_query;
     KPushButton *m_reloadButton;
+    KPushButton *m_detailsButton;
     KPushButton *m_installButton;
     TDEListView *m_list;
     TQLabel *m_status;
     TQLabel *m_details;
     TQTimer *m_searchTimer;
+    bool m_busy;
 
-    FlatpakJob *m_job;
-    bool m_loaded;
-    FpAppList m_apps;
-    TQMap<TQString, bool> m_installed;      // fpRefKey -> true
     TQMap<TQListViewItem *, const FpApp *> m_itemApp;
 };
 

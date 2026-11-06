@@ -11,6 +11,8 @@
 
 #include "flatpaktypes.h"
 
+#include <tqstringlist.h>
+
 namespace FlatpakBackend
 {
     /** List all installed apps and runtimes of the user and system installations. */
@@ -30,6 +32,21 @@ namespace FlatpakBackend
 
     /** Human readable name of an installation scope. */
     TQString scopeName(int scope);
+
+    /**
+     * Patterns stored in the installation configuration key @p key
+     * ("masked" or "pinned"), as managed by "flatpak mask" / "flatpak pin".
+     */
+    TQStringList configPatterns(int scope, const TQString &key);
+
+    /** Does one of the mask/pin @p patterns match the full @p ref? */
+    bool patternsMatch(const TQStringList &patterns, const TQString &ref);
+
+    /** Is an instance of @p appId currently running? */
+    bool isRunning(const TQString &appId);
+
+    /** Per-user data directory of an application (~/.var/app/<id>). */
+    TQString appDataDir(const TQString &appId);
 }
 
 #endif

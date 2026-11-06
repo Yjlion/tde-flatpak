@@ -1,3 +1,17 @@
+tdeflatpak (0.2.0) unstable; urgency=medium
+
+  * New "Browse" page: an app store view with categories and, for Flathub,
+    the Popular, Trending, New and Recently Updated lists.
+  * New application details dialog with description, screenshots, releases,
+    sizes, download counts and requested permissions (local AppStream data
+    and the Flathub web API).
+  * New permission editor (per-user overrides, portal permissions, app data,
+    blocking updates) and a "Flatpak Applications" Control Center module.
+  * New preferences: default installation, periodic update checks, catalog
+    age, Flathub web service, deleting app data on uninstall.
+
+ -- Yjlion <32956705+Yjlion@users.noreply.github.com>  Fri, 06 Nov 2026 09:00:00 -0600
+
 tdeflatpak (0.1.0) unstable; urgency=medium
 
   * Initial release.

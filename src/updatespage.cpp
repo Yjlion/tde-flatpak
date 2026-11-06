@@ -5,6 +5,7 @@
  */
 
 #include "updatespage.h"
+#include "appactions.h"
 #include "flatpakbackend.h"
 #include "flatpakjob.h"
 #include "operationdialog.h"
@@ -23,12 +24,13 @@
 #include <tdemessagebox.h>
 #include <kpushbutton.h>
 
-enum { ColName = 0, ColId, ColBranch, ColOrigin, ColInstallation, ColKind };
+enum { ColName = 0, ColId, ColBranch, ColOrigin, ColInstallation, ColKind, ColNotes };
 
 UpdatesPage::UpdatesPage(TQWidget *parent, const char *name)
     : TQWidget(parent, name),
       m_job(0),
-      m_checked(false)
+      m_checked(false),
+      m_quiet(false)
 {
     TQVBoxLayout *layout = new TQVBoxLayout(this, KDialog::marginHint(), KDialog::spacingHint());
 
@@ -39,6 +41,7 @@ UpdatesPage::UpdatesPage(TQWidget *parent, const char *name)
     m_list->addColumn(i18n("Origin"));
     m_list->addColumn(i18n("Installation"));
     m_list->addColumn(i18n("Type"));
+    m_list->addColumn(i18n("Notes"));
     m_list->setAllColumnsShowFocus(true);
     m_list->setShowSortIndicator(true);
     layout->addWidget(m_list, 1);
@@ -79,6 +82,15 @@ void UpdatesPage::ensureChecked()
     }
 }
 
+void UpdatesPage::checkInBackground()
+{
+    if (m_job) {
+        return;
+    }
+    m_quiet = true;
+    checkForUpdates();
+}
+
 void UpdatesPage::checkForUpdates()
 {
     if (m_job) {
@@ -86,9 +98,12 @@ void UpdatesPage::checkForUpdates()
     }
     m_list->clear();
     m_itemIndex.clear();
+    m_masked.clear();
     m_updates.clear();
     m_status->setText(i18n("Checking for updates..."));
-    TQApplication::setOverrideCursor(TQCursor(TQt::BusyCursor));
+    if (!m_quiet) {
+        TQApplication::setOverrideCursor(TQCursor(TQt::BusyCursor));
+    }
     m_job = new FlatpakJob(FlatpakJob::CheckUpdates, this);
     m_job->start();
     updateButtons();
@@ -109,18 +124,33 @@ void UpdatesPage::customEvent(TQCustomEvent *e)
     delete m_job;
     m_job = 0;
     m_checked = true;
-    TQApplication::restoreOverrideCursor();
+    if (!m_quiet) {
+        TQApplication::restoreOverrideCursor();
+    }
+    m_quiet = false;
 
+    // updates of masked ("flatpak mask") applications are not offered
+    m_masked.clear();
+    const TQStringList masked[2] = { FlatpakBackend::configPatterns(FpScopeUser, "masked"),
+                                     FlatpakBackend::configPatterns(FpScopeSystem, "masked") };
+    int blocked = 0;
     int idx = 0;
     for (FpInstalledRefList::ConstIterator it = m_updates.begin(); it != m_updates.end(); ++it, ++idx) {
         const FpInstalledRef &r = *it;
+        const bool isMasked = !masked[r.scope].isEmpty() && FlatpakBackend::patternsMatch(masked[r.scope], r.ref);
         TQCheckListItem *item = new TQCheckListItem(m_list, r.name, TQCheckListItem::CheckBox);
         item->setText(ColId, r.id);
         item->setText(ColBranch, r.branch);
         item->setText(ColOrigin, r.origin);
         item->setText(ColInstallation, FlatpakBackend::scopeName(r.scope));
         item->setText(ColKind, r.isApp ? i18n("Application") : i18n("Runtime"));
-        item->setOn(true);
+        item->setOn(!isMasked);
+        if (isMasked) {
+            item->setText(ColNotes, i18n("Updates blocked"));
+            item->setEnabled(false);
+            m_masked[item] = true;
+            ++blocked;
+        }
         if (r.isApp) {
             item->setPixmap(ColName, IconCache::load(FlatpakBackend::installedIconPath(r), 22, "application-x-executable"));
         }
@@ -131,11 +161,15 @@ void UpdatesPage::customEvent(TQCustomEvent *e)
         m_status->setText(i18n("Could not check for updates: %1").arg(ev->text));
     } else if (m_updates.isEmpty()) {
         m_status->setText(i18n("Everything is up to date."));
+    } else if (blocked > 0) {
+        m_status->setText(i18n("%1 (%2 blocked)")
+                              .arg(i18n("%n update available", "%n updates available", m_updates.count() - blocked))
+                              .arg(blocked));
     } else {
         m_status->setText(i18n("%n update available", "%n updates available", m_updates.count()));
     }
     updateButtons();
-    emit updatesAvailable(m_updates.count());
+    emit updatesAvailable(m_updates.count() - blocked);
 }
 
 void UpdatesPage::slotItemClicked(TQListViewItem *)
@@ -153,7 +187,7 @@ void UpdatesPage::updateButtons()
     }
     m_checkButton->setEnabled(!m_job);
     m_updateSelectedButton->setEnabled(!m_job && checked > 0);
-    m_updateAllButton->setEnabled(!m_job && !m_updates.isEmpty());
+    m_updateAllButton->setEnabled(!m_job && (int)m_updates.count() > (int)m_masked.count());
 }
 
 void UpdatesPage::slotUpdateSelected()
@@ -172,6 +206,9 @@ void UpdatesPage::runUpdates(bool onlyChecked)
     int count = 0;
     for (TQListViewItem *i = m_list->firstChild(); i; i = i->nextSibling()) {
         if (onlyChecked && !static_cast<TQCheckListItem *>(i)->isOn()) {
+            continue;
+        }
+        if (m_masked.contains(i)) {
             continue;
         }
         if (!m_itemIndex.contains(i)) {

@@ -64,7 +64,7 @@ if [ "$1" = "--inner" ]; then
 
     start --search
     sleep "${CATALOG_WAIT:-45}"           # Flathub catalog download + parse
-    press "Flatpak Manager" alt+s
+    press "Flatpak Manager" alt+e        # S&earch
     xdotool type --delay 40 "image editor"
     sleep 2
     grab "Flatpak Manager" search
@@ -78,6 +78,33 @@ if [ "$1" = "--inner" ]; then
     grab "^Update" operation
     press "^Update" Return
     sleep 1
+    stop
+
+    start --browse
+    sleep "${CATALOG_WAIT:-45}"
+    grab "Flatpak Manager" browse
+    stop
+
+    start --details org.gimp.GIMP
+    window "Application Details" >/dev/null
+    sleep 15                             # Flathub web API and screenshot download
+    grab "Application Details" details
+    press "Application Details" Escape
+    stop
+
+    start --permissions org.example.Notes
+    window "Application Permissions" >/dev/null
+    sleep 2
+    grab "Application Permissions" permissions
+    press "Application Permissions" Escape
+    stop
+
+    tdebuildsycoca --noincremental >/dev/null 2>&1 || true
+    tdecmshell tdeflatpak-settings >>"$W/tdeflatpak.log" 2>&1 &
+    PID=$!
+    window "Control Module" >/dev/null
+    sleep 3
+    grab "Control Module" kcm
     stop
 
     start --remotes
@@ -100,6 +127,14 @@ apt-get install -y -qq /src/dist/tdeflatpak_*_amd64.deb \
     xvfb xauth x11-xserver-utils xdotool imagemagick gnupg fonts-dejavu-core >/dev/null
 mkdir -p "$HOME" "$W"
 cd "$W"
+
+# tdebuildsycoca indexes Control Center modules through tde-applications.menu,
+# which comes with tdebase; the build image only has tdelibs
+mkdir -p "$HOME/.config/menus"
+cat > "$HOME/.config/menus/tde-applications.menu" <<'MENU'
+<!DOCTYPE Menu PUBLIC "-//freedesktop//DTD Menu 1.0//EN" "http://www.freedesktop.org/standards/menu-spec/1.0/menu.dtd">
+<Menu><Name>Applications</Name><DefaultAppDirs/><DefaultDirectoryDirs/><Include><All/></Include></Menu>
+MENU
 
 # bubblewrap cannot create namespaces in an unprivileged container; flatpak
 # only needs it here to sandbox its icon validator, so run that directly
@@ -159,13 +194,14 @@ build_app() {
     <name>$name</name>
     <summary>$summary</summary>
     <icon type="cached" width="64" height="64">$id.png</icon>
+    <categories><category>Utility</category></categories>
     <releases><release version="$version" date="2026-11-01"/></releases>
     <bundle type="flatpak">app/$id/$ARCH/stable</bundle>
   </component>
 </components>
 XML
     gzip -c comp.xml > "$f/share/app-info/xmls/$id.xml.gz"
-    flatpak build-finish --command=run "app-$id" >/dev/null
+    flatpak build-finish --command=run --share=network --socket=x11 --filesystem=xdg-documents "app-$id" >/dev/null
     # exported icon added after build-finish: its icon validation needs bwrap,
     # which does not work inside an unprivileged container
     mkdir -p "app-$id/export/share/icons/hicolor/64x64/apps"

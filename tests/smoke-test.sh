@@ -12,7 +12,7 @@ set -euo pipefail
 
 INNER=0
 if [ "${1:-}" = "--inner" ]; then INNER=1; shift; fi
-WITH_FLATHUB=0
+WITH_FLATHUB=${WITH_FLATHUB:-0}
 if [ "${1:-}" = "--with-flathub" ]; then WITH_FLATHUB=1; shift; fi
 OUT=${1:-/tmp/screenshots}
 mkdir -p "$OUT"
@@ -39,7 +39,7 @@ run_page() {  # $1 = name, rest = args
         xdotool windowactivate --sync "$WID" 2>/dev/null || true
         # the Flathub catalog takes a while to download and parse
         if [ "${WITH_FLATHUB:-0}" = 1 ]; then sleep "${CATALOG_WAIT:-60}"; else sleep 3; fi
-        xdotool key --window "$WID" alt+s
+        xdotool key --window "$WID" alt+e
         xdotool type --delay 50 "gimp"
         shot search-gimp 3
     fi
@@ -53,6 +53,13 @@ if [ "$INNER" = 1 ]; then
     run_page installed
     run_page updates --updates
     run_page search --search
+    if [ "${WITH_FLATHUB:-0}" = 1 ]; then
+        # the catalog and the Flathub web service need a while
+        WAIT=${CATALOG_WAIT:-60} run_page browse --browse
+        WAIT=${CATALOG_WAIT:-60} run_page details --details org.gimp.GIMP
+    else
+        run_page browse --browse
+    fi
     tdeflatpak --version
     exit 0
 fi

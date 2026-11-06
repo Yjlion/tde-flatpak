@@ -12,6 +12,7 @@ Build-Depends: debhelper-compat (= 13),
                libtqtinterface-dev,
                libflatpak-dev (>= 1.6),
                libglib2.0-dev,
+               libjson-glib-dev,
                zlib1g-dev
 Standards-Version: 4.7.0
 Homepage: https://github.com/Yjlion/tde-flatpak

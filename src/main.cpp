@@ -25,9 +25,12 @@ static const char disclaimer[] = I18N_NOOP(
 static TDECmdLineOptions options[] =
 {
     { "+[file]", I18N_NOOP(".flatpakref or .flatpakrepo file to open"), 0 },
+    { "browse", I18N_NOOP("Show the browse (app store) page"), 0 },
     { "updates", I18N_NOOP("Show the updates page"), 0 },
     { "search", I18N_NOOP("Show the search page"), 0 },
     { "remotes", I18N_NOOP("Show the remotes page"), 0 },
+    { "details <app-id>", I18N_NOOP("Show the details of an application"), 0 },
+    { "permissions <app-id>", I18N_NOOP("Edit the permissions of an installed application"), 0 },
     TDECmdLineLastOption
 };
 
@@ -49,7 +52,9 @@ int main(int argc, char **argv)
     win->show();
 
     TDECmdLineArgs *args = TDECmdLineArgs::parsedArgs();
-    if (args->isSet("updates")) {
+    if (args->isSet("browse")) {
+        win->showBrowse();
+    } else if (args->isSet("updates")) {
         win->showUpdates();
     } else if (args->isSet("search")) {
         win->showSearch();
@@ -58,6 +63,12 @@ int main(int argc, char **argv)
     }
     if (args->count() > 0) {
         win->openFile(args->url(0));
+    }
+    if (args->isSet("details")) {
+        win->showDetails(TQString::fromLocal8Bit(args->getOption("details")));
+    }
+    if (args->isSet("permissions")) {
+        win->showPermissions(TQString::fromLocal8Bit(args->getOption("permissions")));
     }
     args->clear();
 

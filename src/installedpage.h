@@ -43,19 +43,29 @@ private slots:
     void slotUninstall();
     void slotDoubleClicked(TQListViewItem *item);
     void slotShowRuntimesToggled(bool on);
+    void slotDetails();
+    void slotPermissions();
+    void slotToggleMask();
+    void slotTogglePin();
+    void slotContextMenu(TDEListView *, TQListViewItem *item, const TQPoint &pos);
 
 private:
     void populate();
+    const FpInstalledRef *currentRef() const;
 
     TDEListView *m_list;
     TDEListViewSearchLine *m_search;
     TQCheckBox *m_showRuntimes;
     KPushButton *m_runButton;
+    KPushButton *m_detailsButton;
+    KPushButton *m_permButton;
     KPushButton *m_uninstallButton;
     KPushButton *m_refreshButton;
     TQLabel *m_summary;
     FpInstalledRefList m_refs;
     TQMap<TQListViewItem *, int> m_itemIndex;
+    TQMap<TQString, bool> m_masked;   // fpRefKey -> true
+    TQMap<TQString, bool> m_pinned;   // fpRefKey -> true
 };
 
 #endif

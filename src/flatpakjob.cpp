@@ -134,6 +134,7 @@ FlatpakJob::FlatpakJob(Kind kind, TQObject *receiver)
       m_cancellable(g_cancellable_new()),
       m_context(0),
       m_forceRefresh(false),
+      m_catalogMaxAge(24),
       m_remoteScope(FpScopeSystem),
       m_remoteGpgVerify(true),
       m_remoteDisabled(false),
@@ -229,6 +230,13 @@ void FlatpakJob::setRemote(int scope, const TQString &name, bool disabled)
     m_remoteDisabled = disabled;
 }
 
+void FlatpakJob::setConfig(int scope, const TQString &key, const TQString &value)
+{
+    m_remoteScope = scope;
+    m_configKey = TQDeepCopy<TQString>(key);
+    m_configValue = TQDeepCopy<TQString>(value);
+}
+
 void FlatpakJob::postEvent(FlatpakJobEvent *ev)
 {
     if (m_receiver) {
@@ -300,6 +308,9 @@ void FlatpakJob::run()
         break;
     case SetRemoteDisabled:
         m_success = runSetRemoteDisabled();
+        break;
+    case SetConfig:
+        m_success = runSetConfig();
         break;
     }
 
@@ -497,7 +508,7 @@ bool FlatpakJob::runLoadCatalog()
             bool needRefresh = m_forceRefresh || !TQFile::exists(xml);
             if (!needRefresh) {
                 TQFileInfo fi(xml);
-                needRefresh = fi.lastModified().secsTo(TQDateTime::currentDateTime()) > 24 * 3600;
+                needRefresh = fi.lastModified().secsTo(TQDateTime::currentDateTime()) > m_catalogMaxAge * 3600;
             }
 
             if (needRefresh) {
@@ -705,6 +716,28 @@ bool FlatpakJob::runSetRemoteDisabled()
         m_error = fpTakeError(err);
     }
     g_object_unref(remote);
+    g_object_unref(inst);
+    return ok;
+}
+
+bool FlatpakJob::runSetConfig()
+{
+    GCancellable *cancellable = CANCELLABLE(m_cancellable);
+    GError *err = NULL;
+    FlatpakInstallation *inst = fpOpenInstallation(m_remoteScope, cancellable, &err);
+    if (!inst) {
+        m_error = fpTakeError(err);
+        return false;
+    }
+    const TQCString value = m_configValue.utf8();
+    gboolean ok = flatpak_installation_set_config_sync(inst, m_configKey.utf8().data(),
+                                                       m_configValue.isEmpty() ? NULL : value.data(),
+                                                       cancellable, &err);
+    if (!ok) {
+        m_error = fpTakeError(err);
+    } else {
+        postLog(FlatpakJobEvent::Info, TQString("%1 = %2").arg(m_configKey).arg(m_configValue));
+    }
     g_object_unref(inst);
     return ok;
 }

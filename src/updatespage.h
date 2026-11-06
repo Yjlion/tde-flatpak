@@ -32,6 +32,8 @@ public:
 public slots:
     void checkForUpdates();
     void ensureChecked();
+    /** Check without a busy cursor (used by the periodic check). */
+    void checkInBackground();
 
 signals:
     void modified();
@@ -56,8 +58,10 @@ private:
     KPushButton *m_updateAllButton;
     FlatpakJob *m_job;
     bool m_checked;
+    bool m_quiet;
     FpInstalledRefList m_updates;
     TQMap<TQListViewItem *, int> m_itemIndex;
+    TQMap<TQListViewItem *, bool> m_masked;
 };
 
 #endif

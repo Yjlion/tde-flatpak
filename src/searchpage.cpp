@@ -1,13 +1,14 @@
 /*
- * tdeflatpak - "Search" page: browse and install applications from remotes.
+ * tdeflatpak - "Search" page: search and install applications from remotes.
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 #include "searchpage.h"
+#include "appactions.h"
+#include "appdetailsdialog.h"
+#include "catalog.h"
 #include "flatpakbackend.h"
-#include "flatpakjob.h"
-#include "operationdialog.h"
 #include "iconcache.h"
 
 #include <tqcursor.h>
@@ -17,13 +18,13 @@
 #include <tqtimer.h>
 
 #include <tdeapplication.h>
-#include <tdeglobal.h>
 #include <kdialog.h>
 #include <kiconloader.h>
 #include <klineedit.h>
 #include <tdelistview.h>
 #include <tdelocale.h>
 #include <tdemessagebox.h>
+#include <tdepopupmenu.h>
 #include <kpushbutton.h>
 
 enum { ColName = 0, ColSummary, ColId, ColBranch, ColRemote, ColStatus };
@@ -32,13 +33,12 @@ static const int MaxResults = 300;
 
 SearchPage::SearchPage(TQWidget *parent, const char *name)
     : TQWidget(parent, name),
-      m_job(0),
-      m_loaded(false)
+      m_busy(false)
 {
     TQVBoxLayout *layout = new TQVBoxLayout(this, KDialog::marginHint(), KDialog::spacingHint());
 
     TQHBoxLayout *top = new TQHBoxLayout(layout, KDialog::spacingHint());
-    TQLabel *label = new TQLabel(i18n("&Search:"), this);
+    TQLabel *label = new TQLabel(i18n("S&earch:"), this);
     top->addWidget(label);
     m_query = new KLineEdit(this);
     m_query->setClickMessage(i18n("Application name, ID or keyword"));
@@ -70,6 +70,8 @@ SearchPage::SearchPage(TQWidget *parent, const char *name)
     TQHBoxLayout *bottom = new TQHBoxLayout(layout, KDialog::spacingHint());
     m_status = new TQLabel(this);
     bottom->addWidget(m_status, 1);
+    m_detailsButton = new KPushButton(SmallIconSet("help-about"), i18n("&Details..."), this);
+    bottom->addWidget(m_detailsButton);
     m_installButton = new KPushButton(SmallIconSet("go-down"), i18n("&Install"), this);
     bottom->addWidget(m_installButton);
 
@@ -80,104 +82,82 @@ SearchPage::SearchPage(TQWidget *parent, const char *name)
     connect(m_searchTimer, TQ_SIGNAL(timeout()), this, TQ_SLOT(slotSearch()));
     connect(m_reloadButton, TQ_SIGNAL(clicked()), this, TQ_SLOT(reloadCatalog()));
     connect(m_installButton, TQ_SIGNAL(clicked()), this, TQ_SLOT(slotInstall()));
+    connect(m_detailsButton, TQ_SIGNAL(clicked()), this, TQ_SLOT(slotDetails()));
     connect(m_list, TQ_SIGNAL(selectionChanged()), this, TQ_SLOT(slotSelectionChanged()));
     connect(m_list, TQ_SIGNAL(doubleClicked(TQListViewItem *)), this, TQ_SLOT(slotDoubleClicked(TQListViewItem *)));
+    connect(m_list, TQ_SIGNAL(returnPressed(TQListViewItem *)), this, TQ_SLOT(slotDoubleClicked(TQListViewItem *)));
+    connect(m_list, TQ_SIGNAL(contextMenu(TDEListView *, TQListViewItem *, const TQPoint &)),
+            this, TQ_SLOT(slotContextMenu(TDEListView *, TQListViewItem *, const TQPoint &)));
+
+    Catalog *catalog = Catalog::self();
+    connect(catalog, TQ_SIGNAL(loadingStarted()), this, TQ_SLOT(slotCatalogLoading()));
+    connect(catalog, TQ_SIGNAL(progress(const TQString &)), this, TQ_SLOT(slotCatalogProgress(const TQString &)));
+    connect(catalog, TQ_SIGNAL(loaded(bool)), this, TQ_SLOT(slotCatalogLoaded(bool)));
+    connect(catalog, TQ_SIGNAL(installedChanged()), this, TQ_SLOT(slotSearch()));
 
     m_status->setText(i18n("The application catalog has not been loaded yet."));
     slotSelectionChanged();
 }
 
-SearchPage::~SearchPage()
-{
-    if (m_job) {
-        m_job->cancel();
-        m_job->wait();
-        delete m_job;
-    }
-}
-
-void SearchPage::setInstalled(const FpInstalledRefList &refs)
-{
-    m_installed.clear();
-    for (FpInstalledRefList::ConstIterator it = refs.begin(); it != refs.end(); ++it) {
-        m_installed[fpRefKey((*it).scope, (*it).ref)] = true;
-    }
-    if (m_loaded) {
-        slotSearch();
-    }
-}
-
 void SearchPage::ensureLoaded()
 {
-    if (!m_loaded && !m_job) {
-        loadCatalog(false);
-    }
+    Catalog::self()->ensureLoaded();
 }
 
 void SearchPage::reloadCatalog()
 {
-    if (!m_job) {
-        loadCatalog(true);
+    Catalog::self()->reload();
+}
+
+void SearchPage::setBusy(bool busy)
+{
+    if (busy == m_busy) {
+        return;
     }
-}
-
-void SearchPage::loadCatalog(bool force)
-{
-    m_job = new FlatpakJob(FlatpakJob::LoadCatalog, this);
-    m_job->setForceRefresh(force);
-    m_job->setLanguage(TDEGlobal::locale()->language());
-    setBusy(true, i18n("Loading application catalog..."));
-    m_job->start();
-}
-
-void SearchPage::setBusy(bool busy, const TQString &text)
-{
+    m_busy = busy;
     m_reloadButton->setEnabled(!busy);
     if (busy) {
         TQApplication::setOverrideCursor(TQCursor(TQt::BusyCursor));
     } else {
         TQApplication::restoreOverrideCursor();
     }
-    if (!text.isNull()) {
-        m_status->setText(text);
-    }
     slotSelectionChanged();
 }
 
-void SearchPage::customEvent(TQCustomEvent *e)
+void SearchPage::slotCatalogLoading()
 {
-    if ((int)e->type() == FlatpakJobEvent::Progress) {
-        FlatpakJobEvent *ev = static_cast<FlatpakJobEvent *>(e);
-        if (!ev->text.isEmpty()) {
-            m_status->setText(i18n("Downloading catalog of %1...").arg(ev->text));
-        }
-    } else if ((int)e->type() == FlatpakJobEvent::Finished) {
-        FlatpakJobEvent *ev = static_cast<FlatpakJobEvent *>(e);
-        if (!m_job) {
-            return;
-        }
-        m_job->wait();
-        m_apps = m_job->apps();
-        const TQStringList warnings = m_job->warnings();
-        delete m_job;
-        m_job = 0;
-        m_loaded = true;
-        setBusy(false);
+    // the old entries are about to be replaced
+    m_list->clear();
+    m_itemApp.clear();
+    m_details->clear();
+    m_status->setText(i18n("Loading application catalog..."));
+    setBusy(true);
+}
 
-        if (!ev->success && m_apps.isEmpty()) {
-            m_status->setText(i18n("Could not load the catalog: %1").arg(ev->text));
-            if (ev->text.contains("No enabled remotes")) {
-                m_status->setText(i18n("No remotes are configured. Add one (e.g. Flathub) on the Remotes page."));
-            }
+void SearchPage::slotCatalogProgress(const TQString &remote)
+{
+    m_status->setText(i18n("Downloading catalog of %1...").arg(remote));
+}
+
+void SearchPage::slotCatalogLoaded(bool ok)
+{
+    setBusy(false);
+    Catalog *catalog = Catalog::self();
+    if (!ok) {
+        if (catalog->lastError().contains("No enabled remotes")) {
+            m_status->setText(i18n("No remotes are configured. Add one (e.g. Flathub) on the Remotes page."));
+        } else {
+            m_status->setText(i18n("Could not load the catalog: %1").arg(catalog->lastError()));
         }
-        slotSearch();
-        if (!warnings.isEmpty() && m_apps.isEmpty()) {
+        if (!catalog->warnings().isEmpty() && isVisible()) {
             KMessageBox::informationList(this, i18n("There were problems loading the catalog:"),
-                                         warnings, i18n("Catalog"));
+                                         catalog->warnings(), i18n("Catalog"));
         }
-    } else {
-        TQWidget::customEvent(e);
+        m_list->clear();
+        m_itemApp.clear();
+        return;
     }
+    slotSearch();
 }
 
 void SearchPage::slotTextChanged(const TQString &)
@@ -188,8 +168,14 @@ void SearchPage::slotTextChanged(const TQString &)
 void SearchPage::slotSearch()
 {
     m_searchTimer->stop();
-    if (!m_loaded) {
-        ensureLoaded();
+    Catalog *catalog = Catalog::self();
+    if (!catalog->isLoaded()) {
+        if (isVisible()) {
+            ensureLoaded();
+        }
+        return;
+    }
+    if (catalog->isLoading()) {
         return;
     }
 
@@ -197,17 +183,18 @@ void SearchPage::slotSearch()
     m_itemApp.clear();
     m_details->clear();
 
+    const FpAppList &apps = catalog->apps();
     const TQString q = m_query->text().stripWhiteSpace();
     if (q.isEmpty()) {
         m_status->setText(i18n("%n application available. Type to search.",
-                               "%n applications available. Type to search.", m_apps.count()));
+                               "%n applications available. Type to search.", apps.count()));
         slotSelectionChanged();
         return;
     }
 
     const TQStringList words = TQStringList::split(' ', q);
     int matches = 0;
-    for (FpAppList::ConstIterator it = m_apps.begin(); it != m_apps.end(); ++it) {
+    for (FpAppList::ConstIterator it = apps.begin(); it != apps.end(); ++it) {
         const FpApp &a = *it;
         bool ok = true;
         for (TQStringList::ConstIterator w = words.begin(); w != words.end() && ok; ++w) {
@@ -220,7 +207,7 @@ void SearchPage::slotSearch()
         if (matches > MaxResults) {
             continue;
         }
-        const bool installed = m_installed.contains(fpRefKey(a.scope, a.ref));
+        const bool installed = catalog->isInstalled(a);
         TQString remote = a.remote + " (" + FlatpakBackend::scopeName(a.scope) + ")";
         TQListViewItem *item = new TQListViewItem(m_list, a.name, a.summary, a.id,
                                                   a.ref.section('/', 3, 3), remote,
@@ -241,6 +228,7 @@ void SearchPage::slotSearch()
 void SearchPage::slotSelectionChanged()
 {
     int installable = 0;
+    int selected = 0;
     const FpApp *current = 0;
     TQListViewItemIterator it(m_list, TQListViewItemIterator::Selected);
     for (; it.current(); ++it) {
@@ -248,14 +236,16 @@ void SearchPage::slotSelectionChanged()
         if (!a) {
             continue;
         }
+        ++selected;
         if (!current) {
             current = a;
         }
-        if (!m_installed.contains(fpRefKey(a->scope, a->ref))) {
+        if (!Catalog::self()->isInstalled(*a)) {
             ++installable;
         }
     }
-    m_installButton->setEnabled(installable > 0 && !m_job);
+    m_installButton->setEnabled(installable > 0 && !m_busy);
+    m_detailsButton->setEnabled(selected == 1 && !m_busy);
 
     if (current) {
         m_details->setText(TQString("<b>%1</b> &mdash; %2<br><small>%3 &middot; %4</small>")
@@ -270,42 +260,44 @@ void SearchPage::slotSelectionChanged()
 
 void SearchPage::slotDoubleClicked(TQListViewItem *item)
 {
-    if (item && m_itemApp.contains(item)) {
-        slotInstall();
+    if (item && m_itemApp.contains(item) && AppDetailsDialog::showDetails(this, m_itemApp[item])) {
+        emit modified();
     }
+}
+
+void SearchPage::slotDetails()
+{
+    TQListViewItemIterator it(m_list, TQListViewItemIterator::Selected);
+    if (it.current()) {
+        slotDoubleClicked(it.current());
+    }
+}
+
+void SearchPage::slotContextMenu(TDEListView *, TQListViewItem *item, const TQPoint &pos)
+{
+    if (!item || !m_itemApp.contains(item)) {
+        return;
+    }
+    TDEPopupMenu menu(this);
+    menu.insertItem(SmallIconSet("help-about"), i18n("&Details..."), this, TQ_SLOT(slotDetails()));
+    int install = menu.insertItem(SmallIconSet("go-down"), i18n("&Install"), this, TQ_SLOT(slotInstall()));
+    menu.setItemEnabled(install, m_installButton->isEnabled());
+    menu.exec(pos);
 }
 
 void SearchPage::slotInstall()
 {
-    TQStringList names;
-    FlatpakJob *job = new FlatpakJob(FlatpakJob::Transaction, 0);
-
+    FpAppPtrList apps;
     TQListViewItemIterator it(m_list, TQListViewItemIterator::Selected);
     for (; it.current(); ++it) {
         const FpApp *a = m_itemApp.contains(it.current()) ? m_itemApp[it.current()] : 0;
-        if (!a || m_installed.contains(fpRefKey(a->scope, a->ref))) {
-            continue;
+        if (a && !Catalog::self()->isInstalled(*a)) {
+            apps.append(a);
         }
-        names.append(i18n("%1 from %2 (%3)").arg(a->name).arg(a->remote).arg(FlatpakBackend::scopeName(a->scope)));
-        job->addInstall(a->scope, a->remote, a->ref);
     }
-    if (names.isEmpty()) {
-        delete job;
-        return;
+    if (AppActions::install(this, apps)) {
+        emit modified();
     }
-
-    int answer = KMessageBox::questionYesNoList(this,
-        i18n("Install the following application?", "Install the following %n applications?", names.count()),
-        names, i18n("Install"),
-        KGuiItem(i18n("&Install"), "go-down"), KStdGuiItem::cancel());
-    if (answer != KMessageBox::Yes) {
-        delete job;
-        return;
-    }
-
-    OperationDialog::run(this, job, i18n("Install"),
-                         i18n("<b>Installing %n application</b>", "<b>Installing %n applications</b>", names.count()));
-    emit modified();
 }
 
 #include "searchpage.moc"

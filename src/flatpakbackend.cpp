@@ -6,7 +6,9 @@
 
 #include "flatpakbackend.h"
 
+#include <tqdir.h>
 #include <tqfile.h>
+#include <tqregexp.h>
 #include <tdelocale.h>
 
 #include "flatpak_p.h"
@@ -182,6 +184,81 @@ TQString libraryVersion()
 TQString scopeName(int scope)
 {
     return scope == FpScopeUser ? i18n("User") : i18n("System");
+}
+
+TQStringList configPatterns(int scope, const TQString &key)
+{
+    TQStringList out;
+    GError *err = NULL;
+    FlatpakInstallation *inst = fpOpenInstallation(scope, NULL, &err);
+    if (!inst) {
+        g_clear_error(&err);
+        return out;
+    }
+    gchar *value = flatpak_installation_get_config(inst, key.utf8().data(), NULL, &err);
+    g_clear_error(&err);   // not set
+    out = TQStringList::split(';', fpStr(value));
+    g_free(value);
+    g_object_unref(inst);
+    return out;
+}
+
+static bool globMatch(const TQString &pattern, const TQString &text)
+{
+    if (pattern.isEmpty() || pattern == "*") {
+        return true;
+    }
+    TQRegExp re(pattern, true, true);
+    return re.exactMatch(text);
+}
+
+bool patternsMatch(const TQStringList &patterns, const TQString &ref)
+{
+    // ref: kind/id/arch/branch
+    const TQString kind = ref.section('/', 0, 0);
+    const TQString id = ref.section('/', 1, 1);
+    const TQString arch = ref.section('/', 2, 2);
+    const TQString branch = ref.section('/', 3, 3);
+
+    for (TQStringList::ConstIterator it = patterns.begin(); it != patterns.end(); ++it) {
+        TQString p = (*it).stripWhiteSpace();
+        if (p.isEmpty()) {
+            continue;
+        }
+        TQString pkind;
+        if (p.startsWith("app/") || p.startsWith("runtime/")) {
+            pkind = p.section('/', 0, 0);
+            p = p.section('/', 1);
+        }
+        if (!pkind.isEmpty() && pkind != kind) {
+            continue;
+        }
+        if (globMatch(p.section('/', 0, 0), id)
+            && globMatch(p.section('/', 1, 1), arch)
+            && globMatch(p.section('/', 2, 2), branch)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool isRunning(const TQString &appId)
+{
+    GPtrArray *instances = flatpak_instance_get_all();
+    bool running = false;
+    for (guint i = 0; instances && i < instances->len && !running; ++i) {
+        FlatpakInstance *inst = FLATPAK_INSTANCE(g_ptr_array_index(instances, i));
+        running = flatpak_instance_is_running(inst) && fpStr(flatpak_instance_get_app(inst)) == appId;
+    }
+    if (instances) {
+        g_ptr_array_unref(instances);
+    }
+    return running;
+}
+
+TQString appDataDir(const TQString &appId)
+{
+    return TQDir::homeDirPath() + "/.var/app/" + appId;
 }
 
 }

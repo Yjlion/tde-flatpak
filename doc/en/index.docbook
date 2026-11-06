@@ -23,13 +23,15 @@
 
 <legalnotice>&underGPL;</legalnotice>
 
-<date>2026-11-05</date>
-<releaseinfo>0.1.0</releaseinfo>
+<date>2026-11-06</date>
+<releaseinfo>0.2.0</releaseinfo>
 
 <abstract>
 <para>&kappname; (<command>tdeflatpak</command>) is a graphical tool for
 the Trinity Desktop Environment (TDE) that installs, updates and removes
-Flatpak applications and manages Flatpak remotes.</para>
+Flatpak applications, lets you browse the application catalog, shows
+application details, changes what applications may access, and manages
+Flatpak remotes.</para>
 </abstract>
 
 <keywordset>
@@ -110,8 +112,42 @@ belongs to.</para>
 
 <para>Start &kappname; from the TDE menu
 (<menuchoice><guimenu>System</guimenu><guimenuitem>Flatpak Manager</guimenuitem></menuchoice>)
-or by running <command>tdeflatpak</command>. The main window has four
+or by running <command>tdeflatpak</command>. The main window has five
 tabs.</para>
+
+<sect1 id="browse-tab">
+<title>The Browse Tab</title>
+
+<screenshot>
+<screeninfo>Browsing popular Flathub applications</screeninfo>
+<mediaobject>
+<imageobject><imagedata fileref="browse.png" format="PNG"/></imageobject>
+<textobject><phrase>The Browse tab</phrase></textobject>
+</mediaobject>
+</screenshot>
+
+<para>The Browse tab is an app store view of the catalog. Choose a section
+on the left. The application icons are shown on the right; a check mark
+means the application is already installed. Type in the
+<guilabel>Filter</guilabel> field to narrow the view.</para>
+
+<para>The categories (<guilabel>Audio &amp; Video</guilabel>,
+<guilabel>Games</guilabel>, <guilabel>Graphics &amp; Photography</guilabel>
+and so on) come from the AppStream data of all enabled remotes, so they also
+work offline and for repositories other than Flathub. Applications without a
+main category are listed under <guilabel>Other</guilabel>.</para>
+
+<para>If Flathub is configured and the Flathub web service is enabled (see
+<xref linkend="preferences"/>), the sections <guilabel>Popular</guilabel>,
+<guilabel>Trending</guilabel>, <guilabel>New</guilabel> and
+<guilabel>Recently Updated</guilabel> show the lists that the Flathub
+website shows.</para>
+
+<para>Double-click an application, or select it and press
+<guibutton>Details...</guibutton>, to open its details (see
+<xref linkend="details"/>). <guibutton>Install</guibutton> installs the
+selected applications. The context menu offers the same actions.</para>
+</sect1>
 
 <sect1 id="installed-tab">
 <title>The Installed Tab</title>
@@ -137,9 +173,22 @@ well.</para>
 application does the same.</para></listitem>
 </varlistentry>
 <varlistentry>
+<term><guibutton>Details...</guibutton></term>
+<listitem><para>Shows the details of the selected application (see
+<xref linkend="details"/>).</para></listitem>
+</varlistentry>
+<varlistentry>
+<term><guibutton>Permissions...</guibutton></term>
+<listitem><para>Opens the permission editor for the selected application
+(see <xref linkend="permissions"/>).</para></listitem>
+</varlistentry>
+<varlistentry>
 <term><guibutton>Uninstall</guibutton></term>
 <listitem><para>Removes the selected items after asking for
-confirmation. You can select several items at once.</para></listitem>
+confirmation. You can select several items at once. If an uninstalled
+application left personal data in <filename>~/.var/app</filename>,
+&kappname; offers to delete it too (you can change this in the
+preferences).</para></listitem>
 </varlistentry>
 <varlistentry>
 <term><guibutton>Refresh</guibutton></term>
@@ -147,6 +196,14 @@ confirmation. You can select several items at once.</para></listitem>
 something with the <command>flatpak</command> command line tool.</para></listitem>
 </varlistentry>
 </variablelist>
+
+<para>The context menu of an application also has <guimenuitem>Block
+Updates</guimenuitem>. A blocked application stays at its current version
+until you allow updates again; this is what <command>flatpak mask</command>
+does. For a runtime, <guimenuitem>Keep When Unused (Pin)</guimenuitem>
+stops <guimenuitem>Remove Unused Runtimes</guimenuitem> from removing it
+(<command>flatpak pin</command>). The <guilabel>Notes</guilabel> column
+shows blocked and pinned items.</para>
 </sect1>
 
 <sect1 id="search-tab">
@@ -170,7 +227,8 @@ An application matches if every word appears in its name, ID or summary.
 At most 300 results are shown, so refine your search if needed.</para>
 
 <para>Select one or more applications and press
-<guibutton>Install</guibutton>, or double-click an application. Each
+<guibutton>Install</guibutton>. Double-click an application, or press
+<guibutton>Details...</guibutton>, to see its details first. Each
 application is installed into the installation that its remote belongs
 to, together with any runtimes it needs. Applications that are already
 installed are marked <guilabel>Installed</guilabel>.</para>
@@ -255,6 +313,168 @@ unsigned. Choose a <guilabel>Name</guilabel> and the
 <guilabel>Installation</guilabel> the remote should be added to.</para>
 </sect1>
 
+<sect1 id="details">
+<title>Application Details</title>
+
+<screenshot>
+<screeninfo>Details of an application</screeninfo>
+<mediaobject>
+<imageobject><imagedata fileref="details.png" format="PNG"/></imageobject>
+<textobject><phrase>The application details dialog</phrase></textobject>
+</mediaobject>
+</screenshot>
+
+<para>The details dialog shows the application's description, screenshots
+(use the arrow buttons to go through them), license, categories, sizes,
+runtime, the latest releases and links to the project's website, bug
+tracker and donation page.</para>
+
+<para>Under <guilabel>Permissions</guilabel> it lists what the application
+may access. Permissions that weaken the sandbox considerably, such as access
+to all your files, to the X11 display or to the full session bus, are
+highlighted. For installed applications these are the permissions of the
+installed version; use <guibutton>Permissions...</guibutton> to change
+them.</para>
+
+<para>The information comes from the AppStream data of the remote. For
+Flathub applications, &kappname; also asks the Flathub web service for the
+download and installed size, the number of installs and the requested
+permissions, if this is enabled in the preferences.</para>
+</sect1>
+
+<sect1 id="permissions">
+<title>Application Permissions</title>
+
+<screenshot>
+<screeninfo>The permission editor</screeninfo>
+<mediaobject>
+<imageobject><imagedata fileref="permissions.png" format="PNG"/></imageobject>
+<textobject><phrase>The permission editor</phrase></textobject>
+</mediaobject>
+</screenshot>
+
+<para>Flatpak applications run in a sandbox. Each application requests the
+permissions it needs; the permission editor lets you take permissions away
+or grant additional ones. Open it with
+<menuchoice><guimenu>Tools</guimenu><guimenuitem>Application Permissions...</guimenuitem></menuchoice>,
+the <guibutton>Permissions...</guibutton> button of an installed
+application, or in the Trinity Control Center (see
+<xref linkend="kcontrol"/>).</para>
+
+<para>Select an application on the left. <guilabel>All
+Applications</guilabel> changes the permissions of every application at
+once; its check boxes have a third state that means <quote>no
+change</quote>. Changes made by you are shown in bold. The changes apply to
+your user account only and are stored in
+<filename>~/.local/share/flatpak/overrides</filename>, exactly like
+<command>flatpak override --user</command>. They take effect the next time
+the application starts. <guibutton>Reset to Defaults</guibutton> removes all
+your changes for the selected application.</para>
+
+<variablelist>
+<varlistentry>
+<term><guilabel>Permissions</guilabel></term>
+<listitem><para>Network access, display (X11, Wayland), sound, graphics
+acceleration, devices, Bluetooth, the session and system bus, the SSH and
+GnuPG agents, printing and advanced features.</para></listitem>
+</varlistentry>
+<varlistentry>
+<term><guilabel>Files</guilabel></term>
+<listitem><para>Folders the application may access. <guibutton>Add...</guibutton>
+grants access to a folder: a special folder such as
+<literal>xdg-download</literal>, <literal>home</literal> or
+<literal>host</literal>, or a path such as <filename>~/Games</filename>,
+read/write, read-only or created if missing. <guibutton>Remove</guibutton>
+removes a folder you added, or revokes access that the application
+requested.</para></listitem>
+</varlistentry>
+<varlistentry>
+<term><guilabel>Environment &amp; D-Bus</guilabel></term>
+<listitem><para>Environment variables set inside the sandbox, and the
+D-Bus names the application may talk to, own or see.</para></listitem>
+</varlistentry>
+<varlistentry>
+<term><guilabel>Portals</guilabel></term>
+<listitem><para>Decisions you made when the application asked through a
+desktop portal, for example to show notifications, run in the background or
+use the camera. Revoking one makes the application ask again. These are
+stored in the portal permission store, as shown by
+<command>flatpak permission-show</command>; changes here take effect
+immediately.</para></listitem>
+</varlistentry>
+<varlistentry>
+<term><guilabel>Storage &amp; Updates</guilabel></term>
+<listitem><para>The folder with the application's settings and data
+(<filename>~/.var/app/<replaceable>application-id</replaceable></filename>)
+and its size. <guibutton>Delete Data...</guibutton> removes it, together
+with the portal permissions, which resets the application to its first-start
+state. The check boxes block updates of the application in the system-wide
+or the user installation. These actions take effect immediately.</para></listitem>
+</varlistentry>
+</variablelist>
+</sect1>
+
+<sect1 id="preferences">
+<title>Preferences</title>
+
+<para>Open the preferences with
+<menuchoice><guimenu>Settings</guimenu><guimenuitem>Configure Flatpak Manager...</guimenuitem></menuchoice>
+or in the Trinity Control Center.</para>
+
+<variablelist>
+<varlistentry>
+<term><guilabel>Install Flatpak files</guilabel></term>
+<listitem><para>Whether applications from <filename>.flatpakref</filename>
+files are installed system-wide, for you only, or whether &kappname;
+asks every time.</para></listitem>
+</varlistentry>
+<varlistentry>
+<term><guilabel>After uninstalling an application</guilabel></term>
+<listitem><para>Whether the application's data is kept, deleted, or
+whether &kappname; asks.</para></listitem>
+</varlistentry>
+<varlistentry>
+<term><guilabel>Check for updates every</guilabel></term>
+<listitem><para>While &kappname; is running it checks for updates in the
+background at this interval and shows the number of updates on the
+Updates tab.</para></listitem>
+</varlistentry>
+<varlistentry>
+<term><guilabel>Download the catalog again after</guilabel></term>
+<listitem><para>How old the AppStream data of a remote may be before it is
+downloaded again.</para></listitem>
+</varlistentry>
+<varlistentry>
+<term><guilabel>Use the Flathub web service</guilabel></term>
+<listitem><para>Enables the Popular, Trending, New and Recently Updated
+lists and the additional details of Flathub applications. Flathub then
+learns which applications you look at. The responses are cached;
+<guibutton>Clear Cached Data</guibutton> deletes the cache.</para></listitem>
+</varlistentry>
+</variablelist>
+</sect1>
+
+<sect1 id="kcontrol">
+<title>The Control Center Module</title>
+
+<screenshot>
+<screeninfo>The Flatpak Applications module</screeninfo>
+<mediaobject>
+<imageobject><imagedata fileref="kcm.png" format="PNG"/></imageobject>
+<textobject><phrase>The Flatpak Applications module in the Trinity Control Center</phrase></textobject>
+</mediaobject>
+</screenshot>
+
+<para>The Trinity Control Center has a <guilabel>Flatpak
+Applications</guilabel> module with the preferences on the
+<guilabel>General</guilabel> tab and the permission editor on the
+<guilabel>Permissions</guilabel> tab. Start it on its own with
+<command>tdecmshell tdeflatpak-settings</command>.
+<guibutton>Open Flatpak Manager</guibutton> starts &kappname; for installing,
+updating and removing applications. A running &kappname; reads changed
+preferences when you open its own configuration dialog or restart it.</para>
+</sect1>
+
 <sect1 id="operations">
 <title>The Progress Dialog</title>
 
@@ -333,6 +553,19 @@ filled in.</para></listitem>
 <term><menuchoice><guimenu>Tools</guimenu><guimenuitem>Remove Unused Runtimes...</guimenuitem></menuchoice></term>
 <listitem><para>Uninstalls runtimes that are no longer used.</para></listitem>
 </varlistentry>
+<varlistentry>
+<term><menuchoice><guimenu>Tools</guimenu><guimenuitem>Application Permissions...</guimenuitem></menuchoice></term>
+<listitem><para>Opens the permission editor (see <xref linkend="permissions"/>).</para></listitem>
+</varlistentry>
+<varlistentry>
+<term><menuchoice><guimenu>Settings</guimenu><guimenuitem>Configure Flatpak Manager...</guimenuitem></menuchoice></term>
+<listitem><para>Opens the preferences (see <xref linkend="preferences"/>).</para></listitem>
+</varlistentry>
+<varlistentry>
+<term><menuchoice><guimenu>Settings</guimenu><guimenuitem>Open in Control Center</guimenuitem></menuchoice></term>
+<listitem><para>Opens the <guilabel>Flatpak Applications</guilabel> module
+(see <xref linkend="kcontrol"/>).</para></listitem>
+</varlistentry>
 </variablelist>
 
 <para>The <guimenu>Help</guimenu> menu is the standard TDE help menu.</para>
@@ -343,13 +576,20 @@ filled in.</para></listitem>
 
 <cmdsynopsis>
 <command>tdeflatpak</command>
+<group choice="opt"><option>--browse</option></group>
 <group choice="opt"><option>--updates</option></group>
 <group choice="opt"><option>--search</option></group>
 <group choice="opt"><option>--remotes</option></group>
+<arg choice="opt"><option>--details</option> <replaceable>app-id</replaceable></arg>
+<arg choice="opt"><option>--permissions</option> <replaceable>app-id</replaceable></arg>
 <arg choice="opt"><replaceable>file</replaceable></arg>
 </cmdsynopsis>
 
 <variablelist>
+<varlistentry>
+<term><option>--browse</option></term>
+<listitem><para>Start with the Browse tab.</para></listitem>
+</varlistentry>
 <varlistentry>
 <term><option>--updates</option></term>
 <listitem><para>Start with the Updates tab.</para></listitem>
@@ -361,6 +601,16 @@ filled in.</para></listitem>
 <varlistentry>
 <term><option>--remotes</option></term>
 <listitem><para>Start with the Remotes tab.</para></listitem>
+</varlistentry>
+<varlistentry>
+<term><option>--details</option> <replaceable>app-id</replaceable></term>
+<listitem><para>Show the details of an application, for example
+<literal>org.gimp.GIMP</literal>.</para></listitem>
+</varlistentry>
+<varlistentry>
+<term><option>--permissions</option> <replaceable>app-id</replaceable></term>
+<listitem><para>Open the permission editor for an installed
+application.</para></listitem>
 </varlistentry>
 <varlistentry>
 <term><replaceable>file</replaceable></term>
