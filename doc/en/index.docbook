@@ -388,6 +388,18 @@ Install <application>polkit-agent-tde</application> and log in again, or
 use the user installation instead.</para></answer>
 </qandaentry>
 <qandaentry>
+<question><para>Loading the catalog fails with <quote>Can't pull from
+untrusted non-gpg verified remote</quote>.</para></question>
+<answer><para>The remote is stored without GPG verification. Flatpak
+refuses to download from such a remote into the system installation.
+Version 0.1.0 of &kappname; had this problem when adding a remote from a
+<filename>.flatpakrepo</filename> file, including <guibutton>Add
+Flathub</guibutton>. Add the remote again in the same way, with the same
+name and installation: the existing remote is then updated and repaired.
+Alternatively, run <userinput><command>sudo flatpak remote-modify
+--gpg-verify</command> <replaceable>name</replaceable></userinput>.</para></answer>
+</qandaentry>
+<qandaentry>
 <question><para>The Search tab says that no remotes are configured.</para></question>
 <answer><para>Add a remote on the Remotes tab, for example with
 <guibutton>Add Flathub</guibutton>, then press
