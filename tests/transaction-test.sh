@@ -70,6 +70,28 @@ if [ "$INNER" = 1 ]; then
     installed && fail "app is still installed"
     echo "OK: uninstalled from the Installed page"
     kill $PID; wait $PID 2>/dev/null || true
+
+    # ---- add a remote from a .flatpakrepo (system installation) -------------
+    # Regression test: libflatpak's flatpak_remote_new_from_file() does not
+    # mark gpg-verify as set, so gpg-verify(-summary) used to be missing from
+    # the stored config and system-helper pulls failed with "Can't pull from
+    # untrusted non-gpg verified remote".  Run twice: add, then repair/update.
+    for round in add update; do
+        tdeflatpak /tmp/testrepo-sys.flatpakrepo >"$OUT/remote-$round.log" 2>&1 &
+        PID=$!
+        sleep 6
+        shot "tx-6-remote-$round-dialog"
+        press "^Add Remote" Return   # OK (System installation is the default)
+        sleep 4
+        shot "tx-7-remote-$round-done"
+        kill $PID; wait $PID 2>/dev/null || true
+        flatpak remotes --system --columns=name | grep -qx testrepo-sys \
+            || fail "remote testrepo-sys was not added ($round)"
+        CONF=$(awk '/^\[remote "testrepo-sys"\]/{f=1;next} /^\[/{f=0} f' /var/lib/flatpak/repo/config)
+        echo "$CONF" | grep -qx "gpg-verify=true" || fail "gpg-verify=true missing ($round): $CONF"
+        echo "$CONF" | grep -qx "gpg-verify-summary=true" || fail "gpg-verify-summary=true missing ($round): $CONF"
+        echo "OK: remote $round from .flatpakrepo keeps GPG verification"
+    done
     exit 0
 fi
 
@@ -113,6 +135,13 @@ Url=file://$W/repo
 IsRuntime=false
 GPGKey=$(base64 -w0 key.gpg)
 REF
+
+cat > /tmp/testrepo-sys.flatpakrepo <<REPO
+[Flatpak Repo]
+Title=tdeflatpak Test Repository
+Url=file://$W/repo
+GPGKey=$(base64 -w0 key.gpg)
+REPO
 
 cd /
 xvfb-run -a -s "-screen 0 1024x700x24" bash "$0" --inner "$OUT"

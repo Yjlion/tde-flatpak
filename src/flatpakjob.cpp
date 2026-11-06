@@ -581,6 +581,20 @@ bool FlatpakJob::runCheckUpdates()
 // Remotes
 // ---------------------------------------------------------------------------
 
+/** Does the .flatpakrepo data contain a (non-empty) GPGKey entry? */
+static bool repoFileHasGpgKey(const TQByteArray &data)
+{
+    GKeyFile *keyfile = g_key_file_new();
+    bool hasKey = false;
+    if (g_key_file_load_from_data(keyfile, data.data(), data.size(), G_KEY_FILE_NONE, NULL)) {
+        gchar *key = g_key_file_get_string(keyfile, "Flatpak Repo", "GPGKey", NULL);
+        hasKey = key && *g_strstrip(key);
+        g_free(key);
+    }
+    g_key_file_free(keyfile);
+    return hasKey;
+}
+
 bool FlatpakJob::runAddRemote()
 {
     GCancellable *cancellable = CANCELLABLE(m_cancellable);
@@ -596,6 +610,21 @@ bool FlatpakJob::runAddRemote()
             m_error = fpTakeError(err);
             return false;
         }
+
+        // libflatpak quirk (seen in 1.16): flatpak_remote_new_from_file()
+        // imports the GPG key but never marks gpg-verify as set, so neither
+        // gpg-verify nor gpg-verify-summary is written to the repo config.
+        // OSTree then defaults gpg-verify-summary to false and system-wide
+        // pulls via the system helper fail with "Can't pull from untrusted
+        // non-gpg verified remote".  Set it explicitly, like
+        // "flatpak remote-add" does.
+        const bool hasKey = repoFileHasGpgKey(m_remoteFile);
+        flatpak_remote_set_gpg_verify(remote, hasKey);
+        if (!hasKey) {
+            postLog(FlatpakJobEvent::Warning,
+                    "The repository file contains no GPG key; downloads from this remote are not verified",
+                    m_remoteName);
+        }
     } else {
         remote = flatpak_remote_new(name.data());
         flatpak_remote_set_url(remote, m_remoteUrl.utf8().data());
@@ -609,11 +638,26 @@ bool FlatpakJob::runAddRemote()
         return false;
     }
 
-    gboolean ok = flatpak_installation_add_remote(inst, remote, TRUE, cancellable, &err);
+    // If the remote already exists, update it with the new settings instead
+    // of silently doing nothing.  This also repairs remotes that were added
+    // with a broken configuration.
+    FlatpakRemote *existing = flatpak_installation_get_remote_by_name(inst, name.data(), cancellable, NULL);
+    gboolean ok;
+    if (existing) {
+        g_object_unref(existing);
+        ok = flatpak_installation_modify_remote(inst, remote, cancellable, &err);
+        if (ok) {
+            postLog(FlatpakJobEvent::Info,
+                    TQString("Remote '%1' already existed; its configuration was updated").arg(m_remoteName));
+        }
+    } else {
+        ok = flatpak_installation_add_remote(inst, remote, FALSE, cancellable, &err);
+        if (ok) {
+            postLog(FlatpakJobEvent::Info, TQString("Remote '%1' added").arg(m_remoteName));
+        }
+    }
     if (!ok) {
         m_error = fpTakeError(err);
-    } else {
-        postLog(FlatpakJobEvent::Info, TQString("Remote '%1' added").arg(m_remoteName));
     }
     g_object_unref(inst);
     g_object_unref(remote);
