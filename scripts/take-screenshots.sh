@@ -4,14 +4,14 @@
 # with a small demo repository (three example apps with AppStream data) and the
 # real Flathub remote, and captures each window with ImageMagick.
 #
-# Usage: scripts/take-screenshots.sh        (needs dist/tdeflatpak_*.deb,
+# Usage: scripts/take-screenshots.sh        (needs dist/tde-flatpak-trinity_*.deb,
 #                                            see scripts/build-deb.sh)
 set -euo pipefail
 
 if [ "${1:-}" != "--inner" ] && [ "${1:-}" != "--container" ]; then
     cd "$(dirname "$0")/.."
     IMAGE=${IMAGE:-tdeflatpak-build:trixie}
-    ls dist/tdeflatpak_*_amd64.deb >/dev/null
+    ls dist/tde-flatpak-trinity_*_amd64.deb >/dev/null
     mkdir -p screenshots
     docker run --rm -e HOST_UID="$(id -u)" -e HOST_GID="$(id -g)" \
         -v "$PWD":/src:ro -v "$PWD/screenshots":/shots "$IMAGE" \
@@ -123,7 +123,7 @@ fi
 # ---------------------------------------------------------------- container
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
-apt-get install -y -qq /src/dist/tdeflatpak_*_amd64.deb \
+apt-get install -y -qq /src/dist/tde-flatpak-trinity_*_amd64.deb \
     xvfb xauth x11-xserver-utils xdotool imagemagick gnupg fonts-dejavu-core >/dev/null
 mkdir -p "$HOME" "$W"
 cd "$W"

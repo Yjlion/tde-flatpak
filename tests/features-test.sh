@@ -163,7 +163,7 @@ fi
 
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
-apt-get install -y -qq /src/dist/tdeflatpak_*_amd64.deb \
+apt-get install -y -qq /src/dist/tde-flatpak-trinity_*_amd64.deb \
     xvfb xauth x11-xserver-utils xdotool x11-apps imagemagick gnupg \
     dbus dbus-x11 xdg-desktop-portal >/dev/null
 mkdir -p "$HOME"

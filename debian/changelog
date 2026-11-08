@@ -1,3 +1,13 @@
+tde-flatpak-trinity (0.2.1) unstable; urgency=medium
+
+  * Rename the source and binary package from "tdeflatpak" to "tde-flatpak-trinity",
+    so that all Trinity add-on packages follow the
+    tde-<name>-trinity scheme. The new package replaces and breaks
+    the old one, so installing it removes the old package.
+    No functional changes.
+
+ -- Yjlion <32956705+Yjlion@users.noreply.github.com>  Sat, 07 Nov 2026 21:15:20 -0500
+
 tdeflatpak (0.2.0) unstable; urgency=medium
 
   * New "Browse" page: an app store view with categories and, for Flathub,
