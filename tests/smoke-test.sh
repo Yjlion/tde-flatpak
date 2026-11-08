@@ -66,7 +66,7 @@ fi
 
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
-apt-get install -y -qq /src/dist/tdeflatpak_*_amd64.deb xvfb xauth x11-xserver-utils xdotool x11-apps imagemagick >/dev/null
+apt-get install -y -qq /src/dist/tde-flatpak-trinity_*_amd64.deb xvfb xauth x11-xserver-utils xdotool x11-apps imagemagick >/dev/null
 mkdir -p "$HOME"
 
 if [ "$WITH_FLATHUB" = 1 ]; then

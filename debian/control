@@ -1,4 +1,4 @@
-Source: tdeflatpak
+Source: tde-flatpak-trinity
 Section: admin
 Priority: optional
 Maintainer: Yjlion <32956705+Yjlion@users.noreply.github.com>
@@ -20,8 +20,10 @@ Vcs-Browser: https://github.com/Yjlion/tde-flatpak
 Vcs-Git: https://github.com/Yjlion/tde-flatpak.git
 Rules-Requires-Root: no
 
-Package: tdeflatpak
+Package: tde-flatpak-trinity
 Architecture: any
+Breaks: tdeflatpak (<< ${source:Version})
+Replaces: tdeflatpak (<< ${source:Version})
 Depends: ${shlibs:Depends}, ${misc:Depends}, flatpak
 Recommends: xdg-desktop-portal-trinity, polkit-agent-tde
 Description: Flatpak manager for the Trinity Desktop Environment

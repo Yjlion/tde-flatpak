@@ -1,6 +1,6 @@
 # Trinity (TDE) applications are installed below /opt/trinity by convention.
-tdeflatpak: dir-or-file-in-opt [opt/trinity/*]
+tde-flatpak-trinity: dir-or-file-in-opt [opt/trinity/*]
 # The TDE/TQt toolchain does not produce a GNU_RELRO segment (same for all
 # binaries in the Trinity archive), although -Wl,-z,relro is passed.
-tdeflatpak: hardening-no-relro [opt/trinity/bin/tdeflatpak]
-tdeflatpak: hardening-no-relro [opt/trinity/lib/trinity/kcm_tdeflatpak.so]
+tde-flatpak-trinity: hardening-no-relro [opt/trinity/bin/tdeflatpak]
+tde-flatpak-trinity: hardening-no-relro [opt/trinity/lib/trinity/kcm_tdeflatpak.so]

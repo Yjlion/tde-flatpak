@@ -86,7 +86,7 @@ Download the `.deb` from the
 [release](../../releases), then:
 
 ```sh
-sudo apt install ./tdeflatpak_*_amd64.deb
+sudo apt install ./tde-flatpak-trinity_*_amd64.deb
 ```
 
 The package depends on `flatpak` and recommends:
@@ -118,7 +118,7 @@ The package is built in a Debian Trixie Docker container with TDE R14.1.x from
 the official Trinity repository:
 
 ```sh
-scripts/build-deb.sh          # writes dist/tdeflatpak_*.deb (runs lintian)
+scripts/build-deb.sh          # writes dist/tde-flatpak-trinity_*.deb (runs lintian)
 scripts/compile-check.sh      # quick compile-only check
 scripts/take-screenshots.sh   # regenerate screenshots/ (needs the built .deb)
 ```
