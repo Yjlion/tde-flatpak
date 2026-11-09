@@ -114,11 +114,13 @@ the local AppStream data.
 
 ## Building
 
-The package is built in a Debian Trixie Docker container with TDE R14.1.x from
-the official Trinity repository:
+The package is built in a Debian Docker container with TDE R14.1.x from the
+official Trinity repository. Trixie is the default; set `SUITE=bookworm` for
+Debian 12, whose package version gets a `~bookworm` suffix:
 
 ```sh
 scripts/build-deb.sh          # writes dist/tde-flatpak-trinity_*.deb (runs lintian)
+SUITE=bookworm scripts/build-deb.sh   # the same for Debian 12 bookworm
 scripts/compile-check.sh      # quick compile-only check
 scripts/take-screenshots.sh   # regenerate screenshots/ (needs the built .deb)
 ```

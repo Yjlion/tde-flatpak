@@ -1,5 +1,9 @@
-# Debian Trixie build environment for tdeflatpak (TDE R14.1.x)
-FROM debian:trixie
+# Debian build environment for tdeflatpak (TDE R14.1.x).
+# SUITE picks the Debian release: trixie (default) or bookworm.
+ARG SUITE=trixie
+FROM debian:${SUITE}
+
+ARG SUITE
 
 ARG DEBIAN_FRONTEND=noninteractive
 ARG TDE_MIRROR=http://mirror.ppa.trinitydesktop.org/trinity/deb/trinity-r14.1.x
@@ -10,7 +14,7 @@ RUN apt-get update \
       http://mirror.ppa.trinitydesktop.org/trinity/deb/trinity-keyring.deb \
  && dpkg -i /tmp/trinity-keyring.deb \
  && rm /tmp/trinity-keyring.deb \
- && echo "deb ${TDE_MIRROR} trixie main deps" > /etc/apt/sources.list.d/trinity.list \
+ && echo "deb ${TDE_MIRROR} ${SUITE} main deps" > /etc/apt/sources.list.d/trinity.list \
  && apt-get update \
  && apt-get install -y --no-install-recommends \
       build-essential devscripts debhelper fakeroot lintian \
